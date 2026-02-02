@@ -481,8 +481,6 @@ if df_raw is not None:
                     with col_i2:
                         st.success(f"🏆 **Point Fort du groupe :** {best_part} ({best_score:.1f}% de réussite)")
 
-                    # SUPPRESSION DU TABLEAU DE DONNÉES (DEMANDE UTILISATEUR)
-
                 # --- CONTENU : ONGLET ÉCART TYPE & CV ---
                 with tab_std:
                     st.header("📏 Analyse de la Dispersion (Écart Type)")
@@ -638,59 +636,6 @@ if df_raw is not None:
                         
                         # Légende explicite sous le graphique (Texte mis à jour selon demande)
                         st.caption("🟢 Vert : Écart type < 15 (Homogène) | 🟡 Jaune : Entre 15 et 20 (Hétérogène) | 🔴 Rouge : Écart type > 20 (Très Hétérogène)")
-                        
-                        # --- SECTION FINALE : COEFFICIENT DE VARIATION (CV) ---
-                        st.markdown("---")
-                        st.subheader("3. ➗ Coefficient de Variation (CV)")
-                        st.info("Le Coefficient de Variation (CV) permet d'affiner l'analyse en relativisant l'écart type par rapport à la moyenne. C'est une mesure plus fiable scientifiquement pour comparer des groupes de niveaux différents.")
-                        
-                        # AJOUT DE LA FORMULE DU CV
-                        st.markdown("**Formule de calcul :**")
-                        st.latex(r"CV = \left( \frac{\text{Écart Type}}{\text{Moyenne}} \right) \times 100")
-
-                        # --- LE FILTRE DE COMPARAISON CV ---
-                        cv_comparators = st.multiselect("👇 Sélectionnez des statuts spécifiques pour voir leurs chiffres (Laisser vide pour voir le Global)", options=all_options)
-                        
-                        st.markdown("<br>", unsafe_allow_html=True)
-                        
-                        # --- LOGIQUE DE CALCUL (Global ou Comparatif) ---
-                        target_groups = []
-                        if not cv_comparators:
-                             # Cas par défaut : Global
-                             target_groups.append(("CV Global (Selon filtres latéraux)", df_filtered))
-                        else:
-                             # Cas comparatif
-                             for s in cv_comparators:
-                                 clean_s = s.replace("🟩 ", "")
-                                 mask = get_mask_for_status(clean_s, df)
-                                 target_groups.append((s, df[mask]))
-                        
-                        # --- BOUCLE D'AFFICHAGE DES CHIFFRES ---
-                        for label, sub_df in target_groups:
-                             if len(sub_df) > 0:
-                                 mean_loc = sub_df[col_score].mean()
-                                 std_loc = sub_df[col_score].std()
-                                 
-                                 if mean_loc > 0: cv_val = (std_loc / mean_loc) * 100
-                                 else: cv_val = 0
-                                 
-                                 # Diagnostic (Mis à jour selon demande)
-                                 if cv_val < 15:
-                                     diag_cv = "🟢 Très Homogène (< 15%)"
-                                     expl_cv = "Le groupe est très compact."
-                                 elif cv_val < 30:
-                                     diag_cv = "🟢 Dispersion Normale (15% - 30%)" # Changé en Vert
-                                     expl_cv = "Hétérogénéité classique."
-                                 else:
-                                     diag_cv = "🟡 Hétérogène (> 30%)" # Changé en Jaune
-                                     expl_cv = "Fortes disparités de niveau."
-
-                                 st.markdown(f"**🔹 {label}**")
-                                 k1, k2, k3 = st.columns(3)
-                                 k1.metric("CV", f"{cv_val:.2f} %")
-                                 k2.metric("Diagnostic", diag_cv)
-                                 k3.markdown(f"**Analyse :** {expl_cv}")
-                                 st.divider()
 
                     else:
                         st.warning("Impossible de calculer l'écart type (colonne score total introuvable).")
@@ -745,8 +690,6 @@ if df_raw is not None:
                 # --- ONGLET ZONE GÉOGRAPHIQUE ---
                 with tab_zone:
                     st.header("📍 Zone Géographique d'exercice")
-                    
-                    # (Texte légende supprimé ici comme demandé)
                     
                     cols_zones = [c for c in df.columns if "zone géographique" in str(c).lower() and "[" in str(c)]
                     
@@ -1481,7 +1424,6 @@ if df_raw is not None:
                     fig_impact.update_traces(textposition='outside')
                     fig_impact.update_layout(yaxis_title=f"Score Moyen (/{max_val})", uniformtext_minsize=8, uniformtext_mode='hide')
                     st.plotly_chart(fig_impact, use_container_width=True)
-                    # --- FIN DE LA MODIFICATION ---
 
                 st.divider()
                 st.subheader('4. 🔥 La "Heatmap" (Carte de Chaleur) des Usages vs Statuts')
@@ -1756,7 +1698,6 @@ if df_raw is not None:
                 st.markdown("<br>", unsafe_allow_html=True)
                 # --- FIN DU BLOC ---
 
-                # TEXTE SUPPRIMÉ ICI COMME DEMANDÉ
                 st.divider()
                 
                 col1, col2 = st.columns([3, 1])

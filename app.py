@@ -1558,30 +1558,8 @@ if df_raw is not None:
 
                         st.divider()
 
-                        # C. USAGE DU NUMÉRIQUE
-                        st.subheader("3. Fracture Numérique ou Mythe ?")
-                        col_num = [c for c in df.columns if "4.2." in c and "Utilisez-vous actuellement des logiciels" in c]
-                        
-                        if col_num:
-                            c_num = col_num[0]
-                            # Utilisation de df_active ici
-                            df_digital = df_active.groupby(['Tranche_Exp', c_num]).size().reset_index(name='Count')
-                            df_digital['Pourcentage'] = df_digital.groupby('Tranche_Exp')['Count'].transform(lambda x: 100 * x / x.sum())
-                            
-                            fig_dig = px.bar(
-                                df_digital, x="Tranche_Exp", y="Pourcentage", color=c_num,
-                                title="Taux d'utilisation du numérique par génération",
-                                color_discrete_map={"Oui": "#2ecc71", "Non": "#e74c3c"},
-                                text_auto='.1f'
-                            )
-                            st.plotly_chart(fig_dig, use_container_width=True)
-                        else:
-                            st.warning("Données numériques (Question 4.2) non trouvées.")
-
-                        st.divider()
-
                         # 4. SECTION DÉTAILLÉE (NEW)
-                        st.subheader("4. 🧠 Analyse Détaillée par Compétence (Focus)")
+                        st.subheader("3. 🧠 Analyse Détaillée par Compétence (Focus)")
                         st.info("Sélectionnez une thématique ci-dessous pour voir comment la maîtrise évolue avec l'expérience.")
 
                         # Dictionary for mapping: Title -> Column Name
@@ -1617,7 +1595,7 @@ if df_raw is not None:
                         st.divider()
                         
                         # 5. NOUVELLE SECTION : COMPARAISON FI VS TERRAIN (Ici on garde tout le monde)
-                        st.subheader("5. 🎓 Trajectoire : De la Formation Initiale à l'Expertise")
+                        st.subheader("4. 🎓 Trajectoire : De la Formation Initiale à l'Expertise")
                         st.markdown("Comparaison directe entre les **futurs enseignants (FI / Sans expérience)** et les **enseignants en poste** (Néos, Juniors, Seniors).")
                         
                         # Préparation des données pour le graphique 5 (On utilise df_exp complet ici)

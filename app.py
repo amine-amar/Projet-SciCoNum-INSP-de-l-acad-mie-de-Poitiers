@@ -14,6 +14,7 @@ import re
 import os
 import numpy as np
 from PIL import Image
+from scipy import stats  # Indispensable pour les calculs statistiques
 
 # ==========================================
 # 1. CONFIGURATION ET DONNÉES STATIQUES
@@ -73,7 +74,7 @@ st.markdown("""
 
 # --- CHEMIN D'ACCÈS SPÉCIFIQUE ---
 DOSSIER_CIBLE = r"C:\Users\mammar03\Desktop\Questionnaire LimeSurvey_Apprentissage et enseignement de la production écrite à l'école... testez vos connaissances\Analyse_347_questionnaire"
-NOM_FICHIER_BASE = "471"
+NOM_FICHIER_BASE = "506"
 
 # MAPPING DES PARTIES
 PARTIES_INFO = {
@@ -264,7 +265,8 @@ if df_raw is not None:
         "📖 Plan Français",
         "💻 Outils Numériques",
         "⏳ Ancienneté",
-        "⚡ Théorie vs Pratique"
+        "⚡ Théorie vs Pratique",
+        "📈 Tests Statistiques"  # <--- LE MENU EST BIEN ICI EN BAS
     ])
 
     # Footer Sidebar
@@ -1342,7 +1344,7 @@ if df_raw is not None:
                                 df_b42, 
                                 x="Statut", 
                                 y="Pourcentage", 
-                                color="Réponse",
+                                color="Réponse", 
                                 title="Répartition de l'utilisation par Statut (% Oui / % Non)", 
                                 text_auto='.1f', 
                                 barmode='stack',
@@ -1559,7 +1561,7 @@ if df_raw is not None:
                         st.divider()
 
                         # 4. SECTION DÉTAILLÉE (NEW)
-                        st.subheader("3. 🧠 Analyse Détaillée par Compétence (Focus)")
+                        st.subheader("4. 🧠 Analyse Détaillée par Compétence (Focus)")
                         st.info("Sélectionnez une thématique ci-dessous pour voir comment la maîtrise évolue avec l'expérience.")
 
                         # Dictionary for mapping: Title -> Column Name
@@ -1595,7 +1597,7 @@ if df_raw is not None:
                         st.divider()
                         
                         # 5. NOUVELLE SECTION : COMPARAISON FI VS TERRAIN (Ici on garde tout le monde)
-                        st.subheader("4. 🎓 Trajectoire : De la Formation Initiale à l'Expertise")
+                        st.subheader("5. 🎓 Trajectoire : De la Formation Initiale à l'Expertise")
                         st.markdown("Comparaison directe entre les **futurs enseignants (FI / Sans expérience)** et les **enseignants en poste** (Néos, Juniors, Seniors).")
                         
                         # Préparation des données pour le graphique 5 (On utilise df_exp complet ici)
@@ -1711,6 +1713,249 @@ if df_raw is not None:
                         color_discrete_map={"Théoriciens": "#e74c3c", "Pragmatiques": "#3498db", "Équilibrés": "#2ecc71"}
                     )
                     st.plotly_chart(fig_cross, use_container_width=True)
+            
+            # === ICI : LE BLOC DE CODE POUR LE NOUVEAU MENU ===
+            elif page == "📈 Tests Statistiques":
+                st.title("📈 Tests Statistiques Avancés")
+                st.info("Cette section permet de valider scientifiquement les observations visuelles. Un résultat est considéré comme **significatif** si la `p-value` est inférieure à **0.05** (5%).")
+                
+                tab_ttest, tab_anova, tab_normality, tab_corr, tab_chi2 = st.tabs([
+                    "1. T-Test (2 groupes)", 
+                    "2. ANOVA (Ancienneté)", 
+                    "3. Normalité (Shapiro)",
+                    "4. Corrélation", 
+                    "5. Indépendance (Chi-2)"
+                ])
+
+                # --- TAB 1 : T-TEST ---
+                with tab_ttest:
+                    st.markdown("### 1️⃣ Test de Student (T-Test)")
+                    st.info("❓ **Question de recherche :** Existe-t-il une différence de niveau significative entre deux groupes (ex: FI vs FC) ?")
+                    st.markdown("Ce test compare les moyennes de deux groupes indépendants pour déterminer si l'écart observé est réel ou dû au hasard.")
+                    
+                    # 1. Sélection de la métrique
+                    metric_options = {
+                        "Score Global (/100)": total_cols[0] if total_cols else None,
+                        "P2. Théorie (/32)": "total_partie_2",
+                        "P3. Pratique (/28)": "total_partie_3",
+                        "P4. Outils Num. (/24)": "total_partie_4"
+                    }
+                    sel_metric_key = st.selectbox("Choisir la variable à comparer :", list(metric_options.keys()))
+                    sel_metric_col = metric_options[sel_metric_key]
+
+                    # 2. Sélection des Groupes
+                    c1, c2 = st.columns(2)
+                    with c1:
+                        group_A = st.selectbox("Groupe A (Référence)", options=all_options, index=0)
+                    with c2:
+                        group_B = st.selectbox("Groupe B (Comparaison)", options=all_options, index=1 if len(all_options)>1 else 0)
+
+                    if st.button("🚀 Lancer le T-Test") and sel_metric_col:
+                        clean_A = group_A.replace("🟩 ", "")
+                        clean_B = group_B.replace("🟩 ", "")
+                        
+                        mask_A = get_mask_for_status(clean_A, df)
+                        mask_B = get_mask_for_status(clean_B, df)
+                        
+                        data_A = df[mask_A][sel_metric_col].dropna()
+                        data_B = df[mask_B][sel_metric_col].dropna()
+                        
+                        if len(data_A) > 1 and len(data_B) > 1:
+                            # 1. Calcul Statistique
+                            t_stat, p_val = stats.ttest_ind(data_A, data_B, equal_var=False)
+                            
+                            # Calcul de l'effet (Cohen's d)
+                            pooled_std = np.sqrt(((len(data_A)-1)*data_A.std()**2 + (len(data_B)-1)*data_B.std()**2) / (len(data_A)+len(data_B)-2))
+                            cohen_d = (data_A.mean() - data_B.mean()) / pooled_std if pooled_std != 0 else 0
+
+                            # 2. Affichage Résultats
+                            col_res1, col_res2, col_res3 = st.columns(3)
+                            col_res1.metric(f"Moyenne A", f"{data_A.mean():.2f}")
+                            col_res2.metric(f"Moyenne B", f"{data_B.mean():.2f}")
+                            col_res3.metric("p-value", f"{p_val:.5f}", delta="Significatif" if p_val < 0.05 else "Non Signif.", delta_color="inverse")
+                            
+                            if p_val < 0.05:
+                                st.success(f"**Différence significative !** (T={t_stat:.2f}). Taille d'effet (Cohen's d) : {abs(cohen_d):.2f}")
+                            else:
+                                st.warning("Pas de différence statistiquement significative.")
+
+                            # 3. VISUALISATION (BOX PLOT) - AJOUTÉ ICI
+                            st.markdown("---")
+                            st.subheader("🔍 Visualisation des distributions")
+                            
+                            # Création d'un DF temporaire pour le graphique
+                            df_viz_A = pd.DataFrame({sel_metric_col: data_A, "Groupe": group_A})
+                            df_viz_B = pd.DataFrame({sel_metric_col: data_B, "Groupe": group_B})
+                            df_viz = pd.concat([df_viz_A, df_viz_B])
+                            
+                            fig_box = px.box(
+                                df_viz, 
+                                x="Groupe", 
+                                y=sel_metric_col, 
+                                points="all", # Affiche tous les points
+                                color="Groupe",
+                                title=f"Comparaison : {group_A} vs {group_B}",
+                                color_discrete_sequence=['#3498db', '#e74c3c']
+                            )
+                            st.plotly_chart(fig_box, use_container_width=True)
+                            
+
+                        else:
+                            st.error("Pas assez de données dans l'un des groupes.")
+
+                # --- 2. ANOVA AVEC VISUELS ---
+                with tab_anova:
+                    st.markdown("### 2️⃣ ANOVA (Analyse de la Variance)")
+                    st.info("❓ **Question de recherche :** L'ancienneté (Néo, Junior, Senior) influence-t-elle significativement la performance ?")
+                    st.markdown("Ce test permet de comparer les moyennes de plus de deux groupes simultanément pour voir si l'un d'eux se détache.")
+                    
+                    # On doit refaire la logique ancienneté ici
+                    col_anciennete = None
+                    for c in df.columns:
+                        if "combien" in c.lower() and "années" in c.lower() and "enseignez" in c.lower():
+                            col_anciennete = c
+                            break
+                    
+                    if col_anciennete and total_cols:
+                        # Petite fonction de nettoyage locale
+                        def clean_exp(val):
+                            s = str(val).lower()
+                            if "+10" in s or "plus de" in s: return "3. Senior"
+                            try:
+                                n = int(re.findall(r'\d+', s)[0])
+                                if n <= 3: return "1. Néo"
+                                elif n <= 10: return "2. Junior"
+                                else: return "3. Senior"
+                            except: return None
+
+                        df_anova = df.copy()
+                        df_anova['Group_Exp'] = df_anova[col_anciennete].apply(clean_exp)
+                        df_anova = df_anova.dropna(subset=['Group_Exp', total_cols[0]])
+                        
+                        # ANOVA
+                        groups = [df_anova[df_anova['Group_Exp'] == g][total_cols[0]] for g in ["1. Néo", "2. Junior", "3. Senior"]]
+                        
+                        if all(len(g) > 1 for g in groups):
+                            f_stat, p_val = stats.f_oneway(*groups)
+                            k_stat, p_val_k = stats.kruskal(*groups) # Test non-paramétrique
+                            
+                            c1, c2 = st.columns(2)
+                            with c1: 
+                                st.metric("Résultat ANOVA (p-value)", f"{p_val:.5f}")
+                                if p_val < 0.05: st.success("✅ Différence significative (Moyennes)")
+                                else: st.warning("❌ Pas d'effet significatif")
+                            
+                            with c2:
+                                st.metric("Résultat Kruskal-Wallis (p-value)", f"{p_val_k:.5f}")
+                                st.caption("Test robuste si distribution non normale")
+
+                            # VISUALISATION (BOX PLOT) - AJOUTÉ ICI
+                            st.markdown("---")
+                            st.subheader("🔍 Visualisation par Ancienneté")
+                            
+                            fig_anova = px.box(
+                                df_anova.sort_values("Group_Exp"), 
+                                x="Group_Exp", 
+                                y=total_cols[0], 
+                                color="Group_Exp",
+                                points="outliers", # Moins chargé que 'all' pour 3 groupes
+                                title="Distribution des scores par Ancienneté",
+                                color_discrete_sequence=px.colors.qualitative.Prism
+                            )
+                            st.plotly_chart(fig_anova, use_container_width=True)
+                            
+                        else:
+                            st.error("Données insuffisantes pour l'ANOVA.")
+                    else:
+                        st.warning("Colonne ancienneté introuvable.")
+
+                # --- 3. NORMALITÉ (NOUVEAU) ---
+                with tab_normality:
+                    st.markdown("### 3️⃣ Test de Normalité (Shapiro-Wilk)")
+                    st.info("❓ **Question de recherche :** La distribution des notes suit-elle une courbe en cloche (Gaussienne) ?")
+                    st.markdown("Important pour valider l'utilisation du T-Test. Si ce n'est pas le cas, on préfère des tests non-paramétriques.")
+                    
+                    target_group = st.selectbox("Choisir un groupe à analyser :", options=all_options)
+                    col_norm = total_cols[0] if total_cols else None
+                    
+                    if st.button("Tester la normalité"):
+                        clean_grp = target_group.replace("🟩 ", "")
+                        mask_grp = get_mask_for_status(clean_grp, df)
+                        data_norm = df[mask_grp][col_norm].dropna()
+                        
+                        if len(data_norm) > 3:
+                            stat_sh, p_sh = stats.shapiro(data_norm)
+                            
+                            c1, c2 = st.columns(2)
+                            c1.metric("Statistique W", f"{stat_sh:.3f}")
+                            c2.metric("p-value", f"{p_sh:.5f}")
+                            
+                            if p_sh < 0.05:
+                                st.warning("⚠️ La distribution n'est pas normale (Privilégier Kruskal-Wallis).")
+                            else:
+                                st.success("✅ La distribution est normale (T-Test / ANOVA valides).")
+                            
+                            # Histogramme simple
+                            fig_hist_norm = px.histogram(data_norm, x=col_norm, nbins=15, title="Histogramme de distribution", marginal="box")
+                            st.plotly_chart(fig_hist_norm, use_container_width=True)
+                        else:
+                            st.error("Pas assez de données.")
+
+                # --- 4. CORRELATION ---
+                with tab_corr:
+                    st.markdown("### 4️⃣ Test de Corrélation (Pearson)")
+                    st.info("❓ **Question de recherche :** Existe-t-il un lien linéaire entre la maîtrise théorique (P2) et la mise en pratique (P3) ?")
+                    st.markdown("Le coefficient varie de -1 (opposés) à +1 (identiques). 0 signifie aucun lien.")
+                    
+                    if 'total_partie_2' in df.columns and 'total_partie_3' in df.columns:
+                        x = df['total_partie_2'].dropna()
+                        y = df.loc[x.index, 'total_partie_3'].dropna() # Ensure alignment
+                        # Re-align x based on y
+                        x = x.loc[y.index]
+                        
+                        corr, p_val = stats.pearsonr(x, y)
+                        
+                        c1, c2 = st.columns(2)
+                        c1.metric("Coefficient de Corrélation (r)", f"{corr:.2f}")
+                        c2.write("Interprétation :")
+                        if abs(corr) > 0.5: c2.success("Lien fort")
+                        elif abs(corr) > 0.3: c2.info("Lien modéré")
+                        else: c2.warning("Lien faible ou nul")
+                        
+                        # MODIFICATION ICI : Suppression de 'trendline="ols"' pour éviter le crash statsmodels
+                        fig_scatter = px.scatter(df, x='total_partie_2', y='total_partie_3', title="Corrélation Théorie / Pratique")
+                        st.plotly_chart(fig_scatter, use_container_width=True)
+                    else:
+                        st.error("Colonnes scores manquantes.")
+
+                # --- 5. CHI-2 ---
+                with tab_chi2:
+                    st.markdown("### 5️⃣ Test d'Indépendance (Chi-2)")
+                    st.info("❓ **Question de recherche :** Deux variables catégorielles (ex: Statut et Participation) sont-elles liées ou indépendantes ?")
+                    st.markdown("Si la p-value est faible, cela veut dire que l'appartenance à un groupe influence le choix.")
+                    
+                    if col_plan:
+                        var_col = st.selectbox("Variable à croiser avec le Statut :", [col_plan[0], "Profil_Match"])
+                        
+                        # Création de la table de contingence
+                        contingency_table = pd.crosstab(df_filtered[col_statut], df_filtered[var_col])
+                        
+                        st.write("Tableau croisé (Effectifs) :")
+                        st.dataframe(contingency_table)
+                        
+                        chi2, p, dof, expected = stats.chi2_contingency(contingency_table)
+                        
+                        st.markdown("---")
+                        if p < 0.05:
+                            st.success(f"✅ **Dépendance significative !** (p={p:.5f})")
+                            st.write(f"Le statut influence la variable '{var_col}'.")
+                        else:
+                            st.warning(f"❌ **Indépendance (Pas de lien).** (p={p:.5f})")
+                            st.write(f"Il n'y a pas de lien statistique prouvé entre le statut et '{var_col}'.")
+                        
+                        # Heatmap
+                        fig_heat = px.imshow(contingency_table, text_auto=True, title="Carte de chaleur des effectifs")
+                        st.plotly_chart(fig_heat, use_container_width=True)
 
 else:
     # Page vide si pas de fichier

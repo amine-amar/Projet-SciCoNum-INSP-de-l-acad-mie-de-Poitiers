@@ -6,4 +6,5 @@ streamlit-folium
 openpyxl
 numpy
 Pillow
+scipy
 requests

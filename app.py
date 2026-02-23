@@ -3564,8 +3564,10 @@ if df_raw is not None:
                 st.info("💡 **Mode Expert activé :** L'IA a mémorisé l'intégralité de votre fichier Excel (statistiques, colonnes) ainsi que le code Python de cette application.")
                 st.divider()
 
-                # 1. CLÉ API
-                GOOG_API_KEY = "AIzaSyCrl-whqghYgQ05RQRS0rsN3X2FcCsLxOE" 
+            
+                # 1. CLÉ API SECURISEE
+                GOOG_API_KEY = st.secrets["GOOG_API_KEY"]
+                
 
                 # Bouton Reset dans la Sidebar (Plus élégant)
                 with st.sidebar:
@@ -3588,6 +3590,28 @@ if df_raw is not None:
                         try:
                             genai.configure(api_key=GOOG_API_KEY)
                             
+                            # --- 🚀 DÉTECTION SÉCURISÉE DU MODÈLE ---
+                            modeles_dispos = [m.name for m in genai.list_models() if 'generateContent' in m.supported_generation_methods]
+                            
+                            if not modeles_dispos:
+                                st.error("❌ Votre clé API est valide, mais n'a accès à aucun modèle. Activez l'API sur Google Cloud.")
+                                st.stop()
+                                
+                            # On force l'utilisation de Gemini 2.5 Flash en priorité
+                            nom_modele_choisi = None
+                            modeles_cibles = ['models/gemini-2.5-flash', 'models/gemini-2.5-flash-latest', 'gemini-2.5-flash']
+                            
+                            for m_ideal in modeles_cibles:
+                                if m_ideal in modeles_dispos:
+                                    nom_modele_choisi = m_ideal
+                                    break
+                            
+                            # Si Gemini 2.5 n'est pas trouvé, on prend le premier qui n'est PAS la version 3
+                            if not nom_modele_choisi:
+                                modeles_sans_v3 = [m for m in modeles_dispos if "gemini-3" not in m]
+                                nom_modele_choisi = modeles_sans_v3[0] if modeles_sans_v3 else modeles_dispos[0]
+                            # ------------------------------------------------------
+
                             buffer = io.StringIO()
                             df.info(buf=buffer)
                             df_info = buffer.getvalue()
@@ -3601,8 +3625,8 @@ if df_raw is not None:
                             system_prompt = f"""
                             Tu es un expert SciCoNum et Data Scientist.
                             
-                            CONTEXTE 1 : LE CODE DE L'APPLICATION (Tes instructions)
-                            Voici le code Python que l'utilisateur a écrit. Il contient les analyses précédentes et la logique des graphiques :
+                            CONTEXTE 1 : LE CODE DE L'APPLICATION
+                            Voici le code Python que l'utilisateur a écrit :
                             ----- DÉBUT CODE -----
                             {code_source}
                             ----- FIN CODE -----
@@ -3610,25 +3634,26 @@ if df_raw is not None:
                             CONTEXTE 2 : LES DONNÉES (Le fichier Excel)
                             Participants: {len(df)}
                             Structure: {df_info}
-                            Stats Descriptives: {df.describe().to_string()}
                             
                             TES MISSIONS :
-                            1. Réponds aux questions sur les données (Moyennes, écarts...).
-                            2. Réponds aux questions sur le CODE (ex: "Comment j'ai calculé le score page 3 ?").
-                            3. Fais des liens entre les analyses codées (Graphiques) et la théorie cognitive.
+                            1. Réponds aux questions sur les données.
+                            2. Réponds aux questions sur le CODE.
+                            Confirme simplement que tu as bien compris tes instructions.
                             """
 
-                            model = genai.GenerativeModel(
-                                model_name='models/gemini-2.5-flash',
-                                system_instruction=system_prompt
-                            )
+                            model = genai.GenerativeModel(model_name=nom_modele_choisi)
                             
-                            st.session_state.chat_session = model.start_chat(history=[])
+                            historique_initial = [
+                                {"role": "user", "parts": [system_prompt]},
+                                {"role": "model", "parts": [f"Compris. Connecté au modèle {nom_modele_choisi}. Je suis prêt."]}
+                            ]
+                            
+                            st.session_state.chat_session = model.start_chat(history=historique_initial)
                             st.session_state.gemini_chat_history = []
                             st.session_state.gemini_model_ready = True
                             
                         except Exception as e:
-                            st.error(f"❌ Erreur lors du lancement de l'IA : {e}")
+                            st.error(f"❌ Erreur de l'API Google : {e}")
                             st.stop()
 
                 # =========================================================

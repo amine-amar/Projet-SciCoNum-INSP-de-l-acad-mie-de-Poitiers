@@ -516,7 +516,7 @@ if df_raw is not None:
     # >>> AUTRES PAGES (AVEC FILTRES)
     # >>> AUTRES PAGES (AVEC FILTRES)
     else:
-        st.title("📊 Tableau de Bord : Production Écrite")
+        st.title("📊 Tableau de Bord")
         
         # =========================================================
         # 1. ZONE FIXE : LA POPULATION GLOBALE (100% Natif Streamlit)
@@ -1311,14 +1311,35 @@ if df_raw is not None:
                     st.warning("Colonne 'Plan Français' introuvable.")
 
             # >>> PAGE 6 : OUTILS NUMÉRIQUES
+            # >>> PAGE 6 : OUTILS NUMÉRIQUES
             elif page == "💻 Outils Numériques":
                 st.markdown("### 💻 Usage des Outils Numériques")
-                # TEXTE MIS À JOUR AVEC BOITE VERTE
-                st.success("""
-                Dans le cadre du projet SciCoNum, cette section évalue la maturité numérique des enseignants. Le numérique est-il utilisé comme un simple support ou comme un levier cognitif pour l'apprentissage de l'écriture ?
-                """)
-                st.markdown("<br>", unsafe_allow_html=True)
-                st.divider()
+                
+                # --- 1. LE CALCUL (FAIT UNE SEULE FOIS POUR TOUTE LA PAGE) ---
+                cols_tools = [c for c in df.columns if "4.1." in c and "outil" in c.lower()]
+                col_aucun_dynamique = next((c for c in cols_tools if "[Aucun outil numérique]" in str(c)), None)
+                
+                def get_div_score(row):
+                    # 1. Le groupe strict des 283 personnes (Ceux qui ont dit OUI à "Aucun")
+                    if col_aucun_dynamique and str(row[col_aucun_dynamique]).strip().lower() == "oui":
+                        return 0 
+                    
+                    # 2. Comptage des outils pour les autres
+                    cnt = 0
+                    for c in cols_tools:
+                        if "[Aucun outil numérique]" in str(c): continue 
+                        v = str(row[c]).strip().lower()
+                        if "[Autre]" in str(c):
+                            if pd.notna(row[c]) and str(row[c]).strip() != "":
+                                cnt += 1
+                        elif v == "oui":
+                            cnt += 1
+                            
+                    # 3. La sécurité pour ignorer les 4 personnes illogiques
+                    if cnt == 0:
+                        return None 
+                        
+                    return cnt
 
                 # CRÉATION DES ONGLETS (MISE A JOUR : 6 Onglets)
                 tab1, tab2, tab4, tab6, tab7, tab8 = st.tabs([
@@ -1688,64 +1709,60 @@ if df_raw is not None:
                         st.error("Score numérique (Partie 4) introuvable pour l'analyse territoriale.")
 
                 # --- ONGLET 7 (NOUVEAU) : HYPOTHÈSE RÉVISION ---
+                # --- ONGLET 7 (NOUVEAU) : HYPOTHÈSE RÉVISION ---
                 with tab7:
                     st.subheader("✍️ L'Hypothèse 'Révision'")
-                    
-                    # --- EXPLICATIONS PÉDAGOGIQUES ---
-                    st.info("""
-                    ### 🧐 De quoi s'agit-il ?
-                    La recherche en sciences cognitives montre que le numérique est particulièrement efficace pour **alléger le coût cognitif** de la révision de texte.
-                    
-                    **L'hypothèse testée :**
-                    Les enseignants qui utilisent beaucoup d'outils numériques (profil "Fort Usage") devraient avoir une meilleure compréhension théorique des processus de **Révision** (relecture, correction) que des processus de **Planification**.
-                    
-                    **Comment lire le graphique ?**
-                    Si la barre des "Gros utilisateurs" est significativement plus haute pour la "Révision", cela valide l'hypothèse que l'outil façonne la compétence.
-                    """)
-                    # ---------------------------------
                     
                     cols_revision = [c for c in df.columns if "score" in c.lower() and ("2.8" in c or "2.9" in c)]
                     cols_planif = [c for c in df.columns if "score" in c.lower() and ("2.4" in c or "2.5" in c)]
                     
                     if cols_revision and cols_planif:
                         df_rev = df_filtered.copy()
-                        
-                        def get_div_score(row):
-                            cnt = 0
-                            if cols_tools:
-                                for c in cols_tools:
-                                    if "Aucun outil" in c: continue
-                                    v = row[c]
-                                    if "[Autre]" in c:
-                                        if pd.notna(v) and str(v).strip()!="": cnt+=1
-                                    elif v=="Oui": cnt+=1
-                            return cnt
-                        
                         df_rev['Indice_Div'] = df_rev.apply(get_div_score, axis=1)
-                        df_rev['Profil_Usage'] = df_rev['Indice_Div'].apply(lambda x: "Fort Usage (>2 outils)" if x > 2 else "Faible Usage (0-2 outils)")
+                        df_rev = df_rev.dropna(subset=['Indice_Div']) # Garde exactement vos 283
                         
-                        df_rev['Score_Revision_Moyen'] = df_rev[cols_revision].mean(axis=1)
-                        df_rev['Score_Planif_Moyen'] = df_rev[cols_planif].mean(axis=1)
+                        def determiner_profil(x):
+                            if x == 0: return "1. Aucun outil (0)"
+                            elif x == 1: return "2. Faible usage (1 outil)"
+                            else: return "3. Fort usage (≥ 2 outils)"
+                                
+                        df_rev['Profil_Usage'] = df_rev['Indice_Div'].apply(determiner_profil)
                         
-                        res_rev = df_rev.groupby('Profil_Usage')[['Score_Revision_Moyen', 'Score_Planif_Moyen']].mean().reset_index()
-                        res_melt = res_rev.melt(id_vars='Profil_Usage', var_name='Type_Tache', value_name='Note_Moyenne')
+                        df_rev['Score_Revision_Moyen'] = df_rev[cols_revision].apply(pd.to_numeric, errors='coerce').mean(axis=1)
+                        df_rev['Score_Planif_Moyen'] = df_rev[cols_planif].apply(pd.to_numeric, errors='coerce').mean(axis=1)
+                        
+                        res_mean = df_rev.groupby('Profil_Usage')[['Score_Revision_Moyen', 'Score_Planif_Moyen']].mean().reset_index()
+                        res_count = df_rev.groupby('Profil_Usage').size().reset_index(name='Effectif')
+                        res_rev_final = pd.merge(res_mean, res_count, on='Profil_Usage')
+                        
+                        res_melt = res_rev_final.melt(id_vars=['Profil_Usage', 'Effectif'], var_name='Type_Tache', value_name='Note_Moyenne')
                         res_melt['Type_Tache'] = res_melt['Type_Tache'].replace({'Score_Revision_Moyen': 'Processus Révision', 'Score_Planif_Moyen': 'Processus Planification'})
                         
-                        fig_hyp = px.bar(
-                            res_melt, 
-                            x='Type_Tache', 
-                            y='Note_Moyenne', 
-                            color='Profil_Usage', 
-                            barmode='group',
-                            title="Comparaison : Le numérique aide-t-il plus pour la Révision ?",
-                            text_auto='.2f'
+                        max_rev = df_filtered[cols_revision].apply(pd.to_numeric, errors='coerce').max().max()
+                        max_plan = df_filtered[cols_planif].apply(pd.to_numeric, errors='coerce').max().max()
+                        if pd.isna(max_rev) or max_rev == 0: max_rev = 4 
+                        if pd.isna(max_plan) or max_plan == 0: max_plan = 4
+
+                        res_melt['Bareme'] = res_melt['Type_Tache'].apply(lambda x: max_rev if 'Révision' in x else max_plan)
+                        
+                        res_melt['Texte_Affiche'] = res_melt.apply(
+                            lambda x: f"<b>{x['Note_Moyenne']:.2f} / {x['Bareme']:.0f}</b><br>({(x['Note_Moyenne']/x['Bareme']*100):.0f}%)<br>n={x['Effectif']}", axis=1
                         )
+                        
+                        fig_hyp = px.bar(
+                            res_melt, x='Type_Tache', y='Note_Moyenne', color='Profil_Usage', barmode='group',
+                            title="Impact de l'équipement numérique sur les connaissances théoriques",
+                            text='Texte_Affiche', color_discrete_sequence=['#e74c3c', '#f39c12', '#2ecc71'] 
+                        )
+                        
+                        fig_hyp.update_traces(textposition='outside', textfont_size=11)
+                        fig_hyp.update_layout(yaxis=dict(range=[0, max(max_rev, max_plan) * 1.5]), margin=dict(t=50, b=50))
+                        
                         st.plotly_chart(fig_hyp, use_container_width=True)
-                    else:
-                        st.warning("Impossible de trouver les questions scores 2.4, 2.5, 2.8 ou 2.9.")
 
                 # --- ONGLET 8 (NOUVEAU) : EFFICACITÉ FORMATION ---
                 with tab8:
+                    
                     st.subheader("🎓 Efficacité de la Formation (ROI)")
                     
                     # --- EXPLICATIONS PÉDAGOGIQUES ---
@@ -2559,6 +2576,9 @@ if df_raw is not None:
                     # =====================================================================
                     # B. COMPARAISON >2 GROUPES (ANOVA & KRUSKAL)
                     # =====================================================================
+                    # =====================================================================
+                    # B. COMPARAISON >2 GROUPES (ANOVA & KRUSKAL)
+                    # =====================================================================
                     with subtab_anova:
                         st.subheader("Comparaison Multi-Groupes")
                         
@@ -2580,7 +2600,7 @@ if df_raw is not None:
                             target_col = total_cols[0]
                             avail_cols = [c for c in df.columns if c != target_col]
                             
-                            # --- FILTRAGE LOCAL AJOUTÉ (Sans modifier le reste) ---
+                            # --- FILTRAGE LOCAL AJOUTÉ ---
                             c_filt1, c_filt2 = st.columns([1, 2])
                             filter_pop = c_filt1.selectbox("Qui inclure ?", ["Tout le monde"] + list(all_options), key="anova_filter_local")
                             
@@ -2597,94 +2617,101 @@ if df_raw is not None:
                             
                             col_group = st.selectbox("Facteur de groupe (Variable explicative) :", avail_cols, index=def_idx, key="anova_grp")
                             
-                            # Préparation Données (AVEC df_filtered maintenant)
-                            df_anova = df_filtered.dropna(subset=[col_group, target_col]).copy()
-                            df_anova[col_group] = df_anova[col_group].astype(str)
-                            grps = [df_anova[df_anova[col_group] == g][target_col] for g in sorted(df_anova[col_group].unique())]
-                            
-                            # VÉRIFICATION : A-t-on assez de groupes ?
-                            if len(grps) > 2 and all(len(g) > 1 for g in grps):
+                            # ==========================================================
+                            # 🚀 LE FAMEUX BOUTON POUR LANCER LE TEST
+                            # ==========================================================
+                            if st.button("🚀 Lancer l'Analyse (Levene, ANOVA & Kruskal)", type="primary"):
                                 
-                                # --- 1. TEST DE LEVENE (HOMOGÉNÉITÉ) ---
-                                st.markdown("##### 1. Vérification des Variances (Levene)")
-                                try:
-                                    stat_levene, p_levene = stats.levene(*grps)
-                                    if p_levene > 0.05:
-                                        st.success(f"✅ Variances homogènes (p={p_levene:.3f}). L'ANOVA classique est valide.")
-                                    else:
-                                        st.warning(f"⚠️ Variances différentes (p={p_levene:.3f}). Privilégiez Welch ou Kruskal-Wallis ci-dessous.")
-                                except:
-                                    st.info("Levene non calculable (Variance nulle dans un groupe ?).")
-
-                                # --- 2. ANOVA (PARAMÉTRIQUE) ---
-                                f_stat, p_anova = stats.f_oneway(*grps)
-                                
-                                # --- 3. KRUSKAL-WALLIS (NON-PARAMÉTRIQUE) ---
-                                try: k_stat, p_kruskal = stats.kruskal(*grps)
-                                except: p_kruskal = 1.0
-
-                                # --- AFFICHAGE RÉSULTATS ---
-                                st.markdown("#### 📊 Résultats Comparés")
-                                c1, c2 = st.columns(2)
-                                
-                                with c1:
-                                    st.info("🟦 **ANOVA (Moyennes)**")
-                                    st.metric("p-value", f"{p_anova:.5f}")
-                                    if p_anova < 0.05: st.success("✅ Différence détectée")
-                                    else: st.warning("❌ Pas d'effet significatif")
-                                
-                                with c2:
-                                    st.info("🟧 **Kruskal-Wallis (Rangs)**")
-                                    st.metric("p-value", f"{p_kruskal:.5f}")
-                                    if p_kruskal < 0.05: st.success("✅ Différence détectée")
-                                    else: st.warning("❌ Pas d'effet significatif")
-
-                                st.markdown("---")
-
-                                # --- EXPLICATION PÉDAGOGIQUE (NOUVEAU BLOC AJOUTÉ) ---
-                                with st.expander("🎓 Comprendre : Comment analyser ces 3 étapes ?"):
-                                    st.markdown("""
-                                    Pour comparer 3 groupes ou plus (ex: *M1 vs M2 vs Titulaires*), l'analyse se fait en étapes :
-
-                                    ### 1. Le Test de Levene (Le Vigile) 👮‍♂️
-                                    * **Son rôle :** Il vérifie si les groupes sont comparables (ont-ils la même dispersion ?).
-                                    * **Si Vert (p > 0.05) :** C'est parfait, les groupes sont équilibrés.
-                                    * **Si Orange (p < 0.05) :** Les variances sont inégales (un groupe est très homogène, l'autre très dispersé). Dans ce cas, **méfiez-vous de l'ANOVA** (Bleu) et faites confiance à **Kruskal-Wallis** (Orange).
-
-                                    ### 2. ANOVA vs Kruskal-Wallis (Les Juges) ⚖️
-                                    Ces deux tests répondent à la question : *"Y a-t-il au moins un groupe différent des autres ?"*
-                                    * **🟦 ANOVA (Moyennes) :** Très puissant, mais sensible aux notes extrêmes. Il compare le "Signal" (différence entre les groupes) au "Bruit" (différence interne).
-                                    * **🟧 Kruskal-Wallis (Rangs) :** Le "4x4" des statistiques. Il classe tous les enseignants/étudiants du 1er au dernier et regarde si un groupe truste le haut du classement. **C'est le résultat le plus sûr** si vos données ne sont pas parfaitement normales.
-
-                                    ### 3. Le Test de Tukey (L'Enquêteur) 🕵️‍♂️
-                                    * **Le problème :** L'ANOVA dit juste "Il y a une différence quelque part", mais ne dit pas où !
-                                    * **La solution :** Si l'ANOVA est significative (Verte), le tableau de **Tukey** (plus bas) compare les groupes 2 par 2 pour trouver le coupable : *"C'est le groupe M2 qui est différent des Titulaires."*
-                                    """)
-
-                                st.markdown("---")
-                                
-                                # Boxplot
-                                st.subheader("Visualisation par Boîtes à Moustaches")
-                                
-                                fig_box = px.box(df_anova.sort_values(col_group), x=col_group, y=target_col, color=col_group, points="outliers")
-                                st.plotly_chart(fig_box, use_container_width=True)
-
-                                # --- 4. POST-HOC (TUKEY) ---
-                                if p_anova < 0.05:
-                                    st.divider()
-                                    st.subheader("🕵️‍♂️ Analyse Post-Hoc (Test de Tukey)")
-                                    st.info("L'ANOVA dit qu'il y a une différence. Tukey nous dit ENTRE QUI.")
+                                with st.spinner("Calculs statistiques en cours..."):
+                                    # Préparation Données (AVEC df_filtered maintenant)
+                                    df_anova = df_filtered.dropna(subset=[col_group, target_col]).copy()
+                                    df_anova[col_group] = df_anova[col_group].astype(str)
+                                    grps = [df_anova[df_anova[col_group] == g][target_col] for g in sorted(df_anova[col_group].unique())]
                                     
-                                    try:
-                                        from statsmodels.stats.multicomp import pairwise_tukeyhsd
-                                        tukey = pairwise_tukeyhsd(endog=df_anova[target_col], groups=df_anova[col_group], alpha=0.05)
+                                    # VÉRIFICATION : A-t-on assez de groupes ?
+                                    if len(grps) > 2 and all(len(g) > 1 for g in grps):
                                         
-                                        res_tukey = pd.DataFrame(data=tukey.summary().data[1:], columns=tukey.summary().data[0])
-                                        res_tukey = res_tukey.rename(columns={"group1": "Groupe A", "group2": "Groupe B", "p-adj": "p-value", "reject": "Significatif ?"})
+                                        # --- 1. TEST DE LEVENE (HOMOGÉNÉITÉ) ---
+                                        st.markdown("##### 1. Vérification des Variances (Levene)")
+                                        try:
+                                            stat_levene, p_levene = stats.levene(*grps)
+                                            if p_levene > 0.05:
+                                                st.success(f"✅ Variances homogènes (p={p_levene:.3f}). L'ANOVA classique est valide.")
+                                            else:
+                                                st.warning(f"⚠️ Variances différentes (p={p_levene:.3f}). Privilégiez Welch ou Kruskal-Wallis ci-dessous.")
+                                        except:
+                                            st.info("Levene non calculable (Variance nulle dans un groupe ?).")
+
+                                        # --- 2. ANOVA (PARAMÉTRIQUE) ---
+                                        f_stat, p_anova = stats.f_oneway(*grps)
                                         
-                                        st.dataframe(res_tukey.style.applymap(lambda v: 'background-color: #d4edda' if v else 'background-color: #f8d7da', subset=['Significatif ?']))
-                                    except:
-                                        st.error("Librairie statsmodels manquante.")
+                                        # --- 3. KRUSKAL-WALLIS (NON-PARAMÉTRIQUE) ---
+                                        try: k_stat, p_kruskal = stats.kruskal(*grps)
+                                        except: p_kruskal = 1.0
+
+                                        # --- AFFICHAGE RÉSULTATS ---
+                                        st.markdown("#### 📊 Résultats Comparés")
+                                        c1, c2 = st.columns(2)
+                                        
+                                        with c1:
+                                            st.info("🟦 **ANOVA (Moyennes)**")
+                                            st.metric("p-value", f"{p_anova:.5f}")
+                                            if p_anova < 0.05: st.success("✅ Différence détectée")
+                                            else: st.warning("❌ Pas d'effet significatif")
+                                        
+                                        with c2:
+                                            st.info("🟧 **Kruskal-Wallis (Rangs)**")
+                                            st.metric("p-value", f"{p_kruskal:.5f}")
+                                            if p_kruskal < 0.05: st.success("✅ Différence détectée")
+                                            else: st.warning("❌ Pas d'effet significatif")
+
+                                        st.markdown("---")
+
+                                        # --- EXPLICATION PÉDAGOGIQUE ---
+                                        with st.expander("🎓 Comprendre : Comment analyser ces 3 étapes ?"):
+                                            st.markdown("""
+                                            Pour comparer 3 groupes ou plus (ex: *M1 vs M2 vs Titulaires*), l'analyse se fait en étapes :
+
+                                            ### 1. Le Test de Levene (Le Vigile) 👮‍♂️
+                                            * **Son rôle :** Il vérifie si les groupes sont comparables (ont-ils la même dispersion ?).
+                                            * **Si Vert (p > 0.05) :** C'est parfait, les groupes sont équilibrés.
+                                            * **Si Orange (p < 0.05) :** Les variances sont inégales. Dans ce cas, méfiez-vous de l'ANOVA et faites confiance à **Kruskal-Wallis**.
+
+                                            ### 2. ANOVA vs Kruskal-Wallis (Les Juges) ⚖️
+                                            Ces deux tests répondent à la question : *"Y a-t-il au moins un groupe différent des autres ?"*
+                                            * **🟦 ANOVA (Moyennes) :** Très puissant, mais sensible aux notes extrêmes.
+                                            * **🟧 Kruskal-Wallis (Rangs) :** Le "4x4" des statistiques. Il classe tous les enseignants du 1er au dernier et regarde si un groupe truste le haut du classement.
+
+                                            ### 3. Le Test de Tukey (L'Enquêteur) 🕵️‍♂️
+                                            * **Le problème :** L'ANOVA dit juste "Il y a une différence", mais ne dit pas où !
+                                            * **La solution :** Si l'ANOVA est significative, le tableau de **Tukey** compare les groupes 2 par 2 pour trouver le coupable : *"C'est le groupe M2 qui est différent des Titulaires."*
+                                            """)
+
+                                        st.markdown("---")
+                                        
+                                        # Boxplot
+                                        st.subheader("Visualisation par Boîtes à Moustaches")
+                                        fig_box = px.box(df_anova.sort_values(col_group), x=col_group, y=target_col, color=col_group, points="outliers")
+                                        st.plotly_chart(fig_box, use_container_width=True)
+
+                                        # --- 4. POST-HOC (TUKEY) ---
+                                        if p_anova < 0.05:
+                                            st.divider()
+                                            st.subheader("🕵️‍♂️ Analyse Post-Hoc (Test de Tukey)")
+                                            st.info("L'ANOVA dit qu'il y a une différence. Tukey nous dit ENTRE QUI.")
+                                            
+                                            try:
+                                                from statsmodels.stats.multicomp import pairwise_tukeyhsd
+                                                tukey = pairwise_tukeyhsd(endog=df_anova[target_col], groups=df_anova[col_group], alpha=0.05)
+                                                
+                                                res_tukey = pd.DataFrame(data=tukey.summary().data[1:], columns=tukey.summary().data[0])
+                                                res_tukey = res_tukey.rename(columns={"group1": "Groupe A", "group2": "Groupe B", "p-adj": "p-value", "reject": "Significatif ?"})
+                                                
+                                                st.dataframe(res_tukey.style.applymap(lambda v: 'background-color: #d4edda' if v else 'background-color: #f8d7da', subset=['Significatif ?']))
+                                            except:
+                                                st.error("Librairie statsmodels manquante.")
+                                    else:
+                                        st.error("Données insuffisantes ou il n'y a pas assez de groupes valides (minimum 3 groupes avec au moins 2 personnes chacun) pour lancer ce test.")
 
                 # =========================================================================
                 # ONGLET 3 : ASSOCIATIONS (CORRÉLATIONS & CHI-2)
@@ -2924,9 +2951,11 @@ if df_raw is not None:
                                 scaler = StandardScaler()
                                 X_scaled = scaler.fit_transform(df_psy)
                                 
-                                # On limite à 10 composantes max pour la lisibilité
-                                n_comps = min(len(sel_cols), 10)
-                                pca = PCA(n_components=n_comps)
+                                # 🛠️ CORRECTION ICI : On prend le minimum entre le nombre de participants (shape[0]), 
+                                # le nombre de questions restantes (shape[1]) et 10.
+                                n_comps_max = min(df_psy.shape[0], df_psy.shape[1], 10)
+                                
+                                pca = PCA(n_components=n_comps_max)
                                 pca.fit(X_scaled)
                                 
                                 exp_var = pca.explained_variance_ratio_ * 100
@@ -2935,13 +2964,13 @@ if df_raw is not None:
                                 # Graphique combiné (Barres + Courbe)
                                 fig_scree = go.Figure()
                                 fig_scree.add_trace(go.Bar(
-                                    x=[f"Dim {i+1}" for i in range(n_comps)], 
+                                    x=[f"Dim {i+1}" for i in range(n_comps_max)], 
                                     y=exp_var, 
                                     name='Variance Expliquée (%)',
                                     marker_color='#3498db'
                                 ))
                                 fig_scree.add_trace(go.Scatter(
-                                    x=[f"Dim {i+1}" for i in range(n_comps)], 
+                                    x=[f"Dim {i+1}" for i in range(n_comps_max)], 
                                     y=cum_var, 
                                     name='Variance Cumulée (%)',
                                     mode='lines+markers',
@@ -2951,8 +2980,10 @@ if df_raw is not None:
                                 fig_scree.update_layout(title="Poids des Dimensions (Scree Plot)", yaxis_title="% d'information expliquée")
                                 st.plotly_chart(fig_scree, use_container_width=True)
                                 
-                                
                                 st.caption(f"💡 Lecture : La 1ère dimension explique à elle seule **{exp_var[0]:.1f}%** des différences de niveau entre les participants.")
+                                
+                            except Exception as e:
+                                st.error(f"Erreur lors du calcul de l'ACP : {e}")
                                 
                             except Exception as e:
                                 st.error(f"Erreur lors du calcul de l'ACP : {e}")
@@ -3561,7 +3592,7 @@ if df_raw is not None:
                     st.title("Assistant IA SciCoNum")
                     st.caption("Votre Data Scientist virtuel. Interrogez vos données ou décortiquez le code source en langage naturel.")
                 
-                st.info("💡 **Mode Expert activé :** L'IA a mémorisé l'intégralité de votre fichier Excel (statistiques, colonnes) ainsi que le code Python de cette application.")
+                st.info("💡 **Bienvenue sur SciCoNum IA :** Votre assistant virtuel, spécialisé dans les liens entre sciences cognitives et usages du numérique, a analysé l'ensemble des réponses à l'enquête. Il est à votre disposition pour vous aider à explorer les données et comprendre l'impact des technologies sur l'enseignement.")
                 st.divider()
 
             

@@ -1342,13 +1342,12 @@ if df_raw is not None:
                     return cnt
 
                 # CRÉATION DES ONGLETS (MISE A JOUR : 6 Onglets)
-                tab1, tab2, tab4, tab6, tab7, tab8 = st.tabs([
+                tab1, tab2, tab4, tab6, tab7 = st.tabs([
                     "📊 Usage & Outils", 
                     "📈 Impact sur la Compétence",
                     "👥 Typologie d'Usager",
                     "🗺️ Fracture Numérique Territoriale",
                     "✍️ L'Hypothèse Révision",
-                    "🎓 Efficacité de la Formation"
                 ])
 
                 # --- ONGLET 1 : Usage général et Logiciels ---
@@ -1713,6 +1712,28 @@ if df_raw is not None:
                 with tab7:
                     st.subheader("✍️ L'Hypothèse 'Révision'")
                     
+                    # =========================================================
+                    # --- DÉBUT DU BLOC D'EXPLICATION (GRAND PUBLIC) ---
+                    # =========================================================
+                    with st.expander("💡 Comprendre la démarche : Le choix des questions et le but", expanded=False):
+                        st.markdown("""
+                        ### 🎯 Le but de cette analyse
+                        L'objectif est de vérifier une hypothèse forte : **l'équipement numérique modifie-t-il la compréhension théorique de l'enseignement de l'écriture ?** L'outil informatique (traitement de texte, tablette) facilite énormément la phase de correction : on peut effacer, copier et déplacer des blocs de texte sans faire de ratures. L'idée est donc de voir si les enseignants très équipés numériquement deviennent, par la force des choses, des "experts" de la révision.
+
+                        ### 🔍 Pourquoi avoir choisi ces questions précises ?
+                        L'analyse ne mélange pas toutes les notes. Elle isole deux processus cognitifs pour les faire s'affronter :
+                        
+                        * **La Planification (Questions 2.4 et 2.5) :** C'est la phase où l'élève cherche ses idées et organise son plan. C'est un processus très mental et abstrait, moins directement influencé par l'écran. Ces questions servent de **"groupe témoin"**.
+                        * **La Révision (Questions 2.8 et 2.9) :** C'est la phase de relecture et de correction du texte. C'est le cœur de l'avantage numérique. Ces questions sont notre **"sujet d'étude"**.
+                        """)
+
+                    st.info("""
+                    **🧐 Ce que l'on s'attend à voir :** Si l'hypothèse est vraie, les enseignants dans le profil "Fort usage" devraient avoir des barres nettement plus hautes pour la **Révision** que pour la **Planification**, comparé à ceux n'utilisant "Aucun outil".
+                    """)
+                    # =========================================================
+                    # --- FIN DU BLOC D'EXPLICATION ---
+                    # =========================================================
+
                     cols_revision = [c for c in df.columns if "score" in c.lower() and ("2.8" in c or "2.9" in c)]
                     cols_planif = [c for c in df.columns if "score" in c.lower() and ("2.4" in c or "2.5" in c)]
                     
@@ -1760,62 +1781,6 @@ if df_raw is not None:
                         
                         st.plotly_chart(fig_hyp, use_container_width=True)
 
-                # --- ONGLET 8 (NOUVEAU) : EFFICACITÉ FORMATION ---
-                with tab8:
-                    
-                    st.subheader("🎓 Efficacité de la Formation (ROI)")
-                    
-                    # --- EXPLICATIONS PÉDAGOGIQUES ---
-                    st.info("""
-                    ### 📊 Retour sur Investissement (ROI) de la Formation
-                    Cette analyse vise à mesurer l'impact concret des formations suivies par les enseignants.
-                    
-                    **La question clé :**
-                    Les formations institutionnelles ou personnelles se traduisent-elles par une **diversification réelle des usages** en classe ?
-                    
-                    **Comment lire le graphique ?**
-                    * Nous comparons deux groupes : ceux qui ont déclaré avoir été formés au numérique vs ceux qui ne l'ont pas été.
-                    * La "Boîte à moustaches" montre la dispersion du nombre d'outils utilisés. Si la boîte des "Formés" est nettement plus haute, la formation est efficace.
-                    """)
-                    # ---------------------------------
-                    
-                    col_form_num = next((c for c in df.columns if "formation" in c.lower() and "numérique" in c.lower() and "suivi" in c.lower()), None)
-                    
-                    if col_form_num:
-                        df_roi = df_filtered.copy()
-                        if 'Indice_Div' not in df_roi.columns:
-                             df_roi['Indice_Div'] = df_roi.apply(get_div_score, axis=1)
-                        
-                        def is_formed(val):
-                            s = str(val).lower()
-                            if "non" in s or "nan" in s or s=="" or s=="0": return "Non Formé"
-                            return "Formé"
-                            
-                        df_roi['Statut_Formation'] = df_roi[col_form_num].apply(is_formed)
-                        
-                        fig_box_roi = px.box(
-                            df_roi, 
-                            x="Statut_Formation", 
-                            y="Indice_Div", 
-                            color="Statut_Formation",
-                            title="Impact de la formation sur la diversité des outils utilisés",
-                            labels={"Indice_Div": "Nombre d'outils différents (Indice)"},
-                            points="all"
-                        )
-                        st.plotly_chart(fig_box_roi, use_container_width=True)
-                        
-                        from scipy import stats
-                        grp_forme = df_roi[df_roi['Statut_Formation']=="Formé"]['Indice_Div']
-                        grp_non = df_roi[df_roi['Statut_Formation']=="Non Formé"]['Indice_Div']
-                        
-                        if len(grp_forme)>1 and len(grp_non)>1:
-                            u_stat, p_val = stats.mannwhitneyu(grp_forme, grp_non)
-                            if p_val < 0.05:
-                                st.success(f"✅ **Impact Significatif** (p={p_val:.4f}). La formation augmente bien la diversité des usages.")
-                            else:
-                                st.warning(f"❌ **Pas d'impact significatif** (p={p_val:.4f}). La formation ne semble pas changer le nombre d'outils utilisés.")
-                    else:
-                        st.error("Colonne sur la formation numérique introuvable.")
 
             # >>> PAGE 7 : NOUVEAU - ANALYSE PAR ANCIENNETÉ
             elif page == "⏳ Ancienneté":

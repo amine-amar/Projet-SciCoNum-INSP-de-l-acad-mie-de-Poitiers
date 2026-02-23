@@ -8,3 +8,9 @@ numpy
 Pillow
 scipy
 requests
+scikit-learn
+statsmodels
+google-generativeai
+wordcloud
+matplotlib
+streamlit-option-menu

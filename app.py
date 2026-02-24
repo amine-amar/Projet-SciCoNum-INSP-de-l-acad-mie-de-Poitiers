@@ -2048,15 +2048,17 @@ if df_raw is not None:
 
                 # --- NAVIGATION : MENU À ONGLETS PRO ---
                 # --- NAVIGATION : MENU À ONGLETS PRO ---
+               
                 tabs = st.tabs([
-                    "📏 Variabilité & Dispersion", 
-                    "🔍 Tests de Normalité", 
-                    "📊 Inférence Statistique", 
-                    "🔗 Mesures d'Association", 
-                    "📐 Validité Psychométrique", 
-                    "🔮 Modélisation Multivariée", 
-                    "💬 Traitement Sémantique (NLP)"
-                ])
+                "📏 Variabilité & Dispersion", 
+                "🔍 Tests de Normalité", 
+                "📊 Inférence Statistique", 
+                "🔗 Mesures d'Association", 
+                "📐 Validité Psychométrique", 
+                "🔮 Modélisation Multivariée", 
+                "💬 Traitement Sémantique (NLP)",
+                "🏗️ Modèles Multiniveaux (HLM)"
+            ])
 
                 # ONGLET 0 : ÉCART TYPE ET CV (DÉPLACÉ ICI)
                 # =========================================================================
@@ -3510,8 +3512,271 @@ if df_raw is not None:
                     else:
                         st.warning("⚠️ Aucune colonne de texte long (Commentaires) détectée dans ce fichier.")
 
-    
-        
+    # =========================================================================
+            # ONGLET 7 : MODÈLES MULTINIVEAUX (HLM / MIXED MODELS)
+            # =========================================================================
+# =========================================================================
+                # ONGLET 7 : MODÈLES MULTINIVEAUX (HLM / MIXED MODELS)
+                # =========================================================================
+                with tabs[7]:
+                    st.header("🏗️ Analyses Multiniveaux (Modèles Mixtes)")
+                    
+                    # --- EXPLICATION PÉDAGOGIQUE ---
+                    st.info("""
+                    ### 🧐 Pourquoi utiliser un modèle multiniveau ?
+                    Vos données sont **hiérarchisées** (emboîtées) : Les enseignants exercent dans des **Académies** (ou des zones géographiques).
+                    
+                    * **L'effet de contexte (ICC) :** On cherche à savoir si le fait d'appartenir à l'Académie de Bordeaux ou de Créteil change les résultats, indépendamment du profil de l'enseignant.
+                    * **Modèle Mixte :** On sépare ce qui vient de l'individu (Effet Fixe) de ce qui vient du territoire (Effet Aléatoire).
+                    """)
+
+                    st.divider()
+
+                    # --- SÉLECTION DES DONNÉES ---
+                    if total_cols and col_academie:
+                        # --- CONFIGURATION UNIQUE DES COLONNES ---
+                        c_hlm_select1, c_hlm_select2, c_hlm_select3 = st.columns(3)
+                        
+                        # 1. Variable dépendante (Score)
+                        y_target_hlm = c_hlm_select1.selectbox("1. Variable à expliquer (Y) :", total_cols, key="hlm_y_target_final")
+                        
+                        # 2. Variable de regroupement (Niveau 2)
+                        keywords_group = ["zone", "statut", "niveau", "type", "établissement", "circonscription"]
+                        potential_groups = [col_academie]
+                        
+                        if 'col_statut' in locals() and col_statut not in potential_groups:
+                            potential_groups.append(col_statut)
+                        
+                        potential_groups += [
+                            c for c in df.columns 
+                            if any(k in c.lower() for k in keywords_group) 
+                            and "[" not in c 
+                            and c not in potential_groups
+                            and df[c].dtype == 'object'
+                            and df[c].nunique() < 100
+                            and "classes multi" not in c.lower()  
+                            and "conseiller" not in c.lower()     
+                        ]
+                        
+                        group_col = c_hlm_select2.selectbox("2. Variable de Regroupement (Niveau 2) :", potential_groups, key="hlm_group_final")
+                        
+                        # 3. Facteurs explicatifs (Niveau 1)
+                        x_candidates = [c for c in df.columns if c not in [y_target_hlm, group_col, "ID de la réponse"]] # On autorise tout pour le filtrage après
+                        x_fixed = c_hlm_select3.multiselect("3. Facteurs explicatifs (Fixes) :", [c for c in df.columns if "score" in c.lower() or "ancien" in c.lower()], key="hlm_x_fixed_final")
+
+                        st.markdown("---")
+
+                        if st.button("🚀 Calculer le Modèle Mixte (MixedLM)", key="btn_launch_mixedlm_final"):
+                            with st.spinner("Extraction des chiffres et analyse..."):
+                                try:
+                                    import statsmodels.formula.api as smf
+                                    
+                                    # =========================================================
+                                    # 1. PRÉPARATION INTELLIGENTE & EXTRACTION FORCE BRUTE
+                                    # =========================================================
+                                    
+                                    # On fait une copie de travail
+                                    df_hlm = df.copy()
+                                    
+                                    # A. Conversion du Groupe en texte (catégorie)
+                                    df_hlm[group_col] = df_hlm[group_col].astype(str)
+                                    
+                                    # B. Vérification et Nettoyage des Facteurs Explicatifs (X)
+                                    valid_x_fixed = []
+                                    rejected_cols = []
+                                    
+                                    for col in x_fixed:
+                                        # 1. Tentative standard
+                                        converted = pd.to_numeric(df_hlm[col], errors='coerce')
+                                        
+                                        # 2. Si échec (trop de vides), on tente l'extraction Regex (Force brute)
+                                        # Ex: "2 points" -> 2
+                                        if converted.isna().mean() > 0.3:
+                                            # On prend le premier groupe de chiffres trouvé
+                                            extracted = df_hlm[col].astype(str).str.extract(r'(\d+[.,]?\d*)', expand=False)
+                                            # On remplace virgule par point
+                                            extracted = extracted.str.replace(',', '.', regex=False)
+                                            converted = pd.to_numeric(extracted, errors='coerce')
+                                        
+                                        # 3. Verdict final : Si toujours trop de vides (>50%), on rejette
+                                        if converted.isna().mean() > 0.5:
+                                            rejected_cols.append(col)
+                                        else:
+                                            # C'est bon, on garde la version numérique
+                                            df_hlm[col] = converted
+                                            valid_x_fixed.append(col)
+                                    
+                                    # Conversion de la cible (Y) aussi
+                                    df_hlm[y_target_hlm] = pd.to_numeric(df_hlm[y_target_hlm], errors='coerce')
+                                    
+                                    # C. Feedback à l'utilisateur (SANS BLOQUER)
+                                    if rejected_cols:
+                                        st.warning(f"""
+                                        ⚠️ **Correction automatique :** Impossible d'extraire des chiffres fiables pour ces colonnes (trop de texte) :
+                                        * {', '.join(rejected_cols)}
+                                        *Le calcul continue avec les {len(valid_x_fixed)} autres variables.*
+                                        """)
+                                    
+                                    # D. Sélection finale des colonnes utiles
+                                    cols_final = [y_target_hlm, group_col] + valid_x_fixed
+                                    df_hlm = df_hlm[cols_final].dropna()
+                                    
+                                    # E. Filtrage des petits groupes
+                                    counts = df_hlm[group_col].value_counts()
+                                    valid_groups = counts[counts > 2].index
+                                    df_hlm = df_hlm[df_hlm[group_col].isin(valid_groups)]
+                                    
+                                    # F. Reset Index
+                                    df_hlm = df_hlm.reset_index(drop=True)
+                                    
+                                    # G. Vérification finale
+                                    if df_hlm.empty:
+                                        st.error("⚠️ Erreur : Plus aucune donnée disponible après nettoyage. Vérifiez que la variable Cible (Y) est bien numérique.")
+                                        st.stop()
+
+                                    # =========================================================
+                                    # 2. MODÉLISATION
+                                    # =========================================================
+                                    
+                                    # Renommage pour éviter les bugs (espaces, points...)
+                                    rename_map = {y_target_hlm: "TARGET", group_col: "GROUP"}
+                                    for i, col in enumerate(valid_x_fixed):
+                                        rename_map[col] = f"VAR_{i}"
+                                    
+                                    df_model_ready = df_hlm.rename(columns=rename_map)
+
+                                    # Formule dynamique avec les variables valides uniquement
+                                    if valid_x_fixed:
+                                        predictors = [f"VAR_{i}" for i in range(len(valid_x_fixed))]
+                                        formula = "TARGET ~ " + " + ".join(predictors)
+                                    else:
+                                        formula = "TARGET ~ 1" # Modèle vide si aucun X valide
+
+                                    # Fit
+                                    model_hlm = smf.mixedlm(formula, df_model_ready, groups=df_model_ready["GROUP"])
+                                    result_hlm = model_hlm.fit()
+
+                                    # Calculs résultats
+                                    try:
+                                        var_re = float(result_hlm.cov_re.iloc[0, 0])
+                                        var_resid = result_hlm.scale
+                                        icc = var_re / (var_re + var_resid)
+                                    except:
+                                        icc = 0
+                                        var_re = 0
+                                    
+                                    # =========================================================
+                                    # 3. AFFICHAGE RÉSULTATS
+                                    # =========================================================
+                                    c_res1, c_res2 = st.columns([1, 2])
+                                    # --- AJOUT DE L'EXPLICATION GRAND PUBLIC ---
+                                    with st.expander("❓ Aide : Comment interpréter le pourcentage et le diagnostic ?", expanded=False):
+                                        st.markdown("""
+                                        ### 🎯 Quel est le but ?
+                                        Cette analyse cherche à savoir si les scores sont influencés par le **contexte local** (votre Académie) ou s'ils dépendent uniquement du profil de chaque participant.
+
+                                        ### ⚖️ Le chiffre vs La preuve
+                                        * **Le Pourcentage (ICC) :** C'est un **indice**. Il montre la part d'influence potentielle du territoire. À 11%, on sent qu'il se passe quelque chose localement.
+                                        * **Le Diagnostic (Négligeable/Pertinent) :** C'est la **fiabilité**. Si un groupe est très grand et les autres très petits, l'ordinateur juge que le signal est trop fragile pour être une preuve scientifique.
+                                        
+                                        **Conclusion :** Un résultat peut être marqué "négligeable" même avec un pourcentage correct si les données sont trop déséquilibrées pour garantir une certitude mathématique.
+                                        """)
+                                    with c_res1:
+                                        st.metric("ICC (Effet Contextuel)", f"{icc:.2%}")
+                                    
+                                    with c_res2:
+                                        nb_groupes = len(result_hlm.random_effects)
+                                        st.success(f"Modèle convergé sur **{result_hlm.nobs:.0f} observations**.")
+
+                                    # --- DIAGNOSTIC INTELLIGENT ---
+                                    st.markdown("---")
+                                    st.subheader("💡 Diagnostic de l'Expert")
+
+                                    # LOGIQUE : Si variance nulle ou non-convergence
+                                    if var_re < 0.01 or result_hlm.converged is False:
+                                        st.warning(f"""
+                                        **📉 Résultat : L'effet de contexte est négligeable (Group Var = {var_re:.4f}).**
+                                        
+                                        Puisque la variance inter-groupe est quasi nulle et/ou que le modèle peine à converger, **vous n'avez pas besoin d'un modèle multiniveau complexe**.
+                                        L'effet "Académie/Groupe" est un bruit de fond inutile ici.
+                                        
+                                        👉 **Conseil :** Vous obtiendrez des résultats plus propres et tout aussi justes en utilisant simplement la **Régression Linéaire classique (OLS)** (disponible dans l'onglet 5 "Modélisation").
+                                        """)
+                                        with st.expander("📝 Résumé pour rapport (Négatif)"):
+                                            st.code(f"""
+    L'analyse multiniveau ne révèle aucun effet contextuel significatif lié à l'académie (Variance inter-groupe = {var_re:.3f} ≈ 0). 
+    Les disparités de performance s'expliquent donc entièrement par les caractéristiques individuelles des enseignants (telles que {', '.join(valid_x_fixed) if valid_x_fixed else 'les variables testées'}) et non par leur territoire d'exercice.
+                                            """, language="markdown")
+                                    else:
+                                        st.success(f"""
+                                        **🚀 Résultat : Il existe un véritable effet de contexte (Group Var = {var_re:.4f}) !**
+                                        Le modèle multiniveau est pertinent et a détecté des différences géographiques significatives.
+                                        """)
+                                        with st.expander("📝 Résumé pour rapport (Positif)"):
+                                            st.code(f"""
+    L'analyse multiniveau révèle un effet contextuel marqué : une part significative de la variance des scores est imputable au niveau de regroupement (Variance inter-groupe = {var_re:.3f}).
+    L'utilisation d'un modèle hiérarchique est donc validée.
+                                            """, language="markdown")
+
+                                    # --- GRAPHIQUES ---
+                                    st.markdown("---")
+                                    
+                                    # 1. CATERPILLAR PLOT (SÉCURISÉ)
+                                    try:
+                                        random_effects = result_hlm.random_effects
+                                        df_re = pd.DataFrame.from_dict(random_effects, orient='index', columns=['Effet'])
+                                        
+                                        # Si vide ou tout à zéro
+                                        if df_re.empty or (df_re['Effet'].abs().sum() < 0.001):
+                                            st.info("ℹ️ Pas d'écarts significatifs entre les académies à afficher (Graphique vide).")
+                                        else:
+                                            st.subheader("🐛 'Caterpillar Plot' (Ecarts par Académie)")
+                                            df_re = df_re.sort_values('Effet')
+                                            df_re['Color'] = df_re['Effet'].apply(lambda x: 'Supérieur' if x > 0 else 'Inférieur')
+                                            fig_cat = px.scatter(df_re, x="Effet", y=df_re.index, color="Color", 
+                                                                title="Écarts à la moyenne", color_discrete_map={'Supérieur': '#2ecc71', 'Inférieur': '#e74c3c'})
+                                            fig_cat.add_vline(x=0, line_color="black")
+                                            st.plotly_chart(fig_cat, use_container_width=True)
+                                    except Exception as e_graph:
+                                        st.info("Graphique non disponible.")
+
+                                    # 2. EFFETS FIXES (GRAPHIQUE)
+                                    if valid_x_fixed:
+                                        st.subheader("📊 Impact des variables (Effets Fixes)")
+                                        params = result_hlm.params.drop(["Intercept", "Group Var"], errors='ignore')
+                                        conf = result_hlm.conf_int().drop(["Intercept", "Group Var"], errors='ignore')
+                                        
+                                        if not params.empty:
+                                            reverse_map = {v: k for k, v in rename_map.items() if k in valid_x_fixed}
+                                            summary_data = []
+                                            for var_code in params.index:
+                                                summary_data.append({
+                                                    "Variable": reverse_map.get(var_code, var_code),
+                                                    "Coefficient": params[var_code],
+                                                    "Min": conf.loc[var_code, 0],
+                                                    "Max": conf.loc[var_code, 1]
+                                                })
+                                            
+                                            if summary_data:
+                                                fig_fixed = px.bar(pd.DataFrame(summary_data), x="Coefficient", y="Variable", 
+                                                                error_x="Max", error_x_minus="Min", orientation='h')
+                                                fig_fixed.add_vline(x=0, line_color="black")
+                                                st.plotly_chart(fig_fixed, use_container_width=True)
+
+                                    # =========================================================
+                                    # 4. TABLEAU STATISTIQUE COMPLET (DANS UN MENU DÉROULANT)
+                                    # =========================================================
+                                    st.markdown("---")
+                                    
+                                    with st.expander("📋 Détails statistiques (Cliquez pour afficher les résultats bruts)", expanded=False):
+                                        st.write("Voici le résumé mathématique complet généré par le modèle :")
+                                        st.text(result_hlm.summary().as_text())
+
+                                except Exception as e:
+                                    st.error(f"❌ Erreur technique détaillée : {e}")
+                    else:
+                        st.warning("Données manquantes (Score ou Académie) pour l'analyse multiniveau.")
+
                 # >>> PAGE 7 : ASSISTANT COGNITIF (MODE DIAGNOSTIC + LECTURE CODE)
             elif page == "🧠 Assistant Cognitif":
                 

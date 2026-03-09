@@ -363,12 +363,7 @@ if df_raw is not None:
     # 4. INTERFACE
     # ==========================================
     
-    # --- LOGO EN HAUT A GAUCHE (SIDEBAR) ---
-    logo_url = "https://github.com/amine-amar/Photo_inspe/blob/main/UP%20+%20INSPE%20HD.png?raw=true"
-    try:
-        st.sidebar.image(logo_url, use_container_width=True)
-    except:
-        pass
+  
 
     # --- NAVIGATION ---
     # --- NAVIGATION CATÉGORISÉE ULTRA-COMPACTE ---
@@ -389,7 +384,25 @@ if df_raw is not None:
     </style>
     """, unsafe_allow_html=True)
 
+    # --- DÉBUT MODIFICATION LOGO ---
+    # On place le logo tout en haut de la barre latérale
+    logo_local = "logo_inspe.png"  # Assurez-vous que votre fichier s'appelle bien comme ça
+    logo_web = "https://github.com/amine-amar/Photo_inspe/blob/main/UP%20+%20INSPE%20HD.png?raw=true"
+
+    if os.path.exists(logo_local):
+        # Priorité 1 : Fichier local (Plus rapide et stable)
+        st.sidebar.image(logo_local, use_container_width=True)
+    else:
+        # Priorité 2 : Lien Web (si le fichier local est absent)
+        try:
+            st.sidebar.image(logo_web, use_container_width=True)
+        except:
+            # Priorité 3 : Juste du texte (pour éviter l'icône brisée)
+            st.sidebar.header("🏫 INSPÉ Poitiers")
+
+    st.sidebar.markdown("---")
     st.sidebar.title("📌 Menu Principal")
+    # --- FIN MODIFICATION LOGO ---
     
     # 2. Initialisation de la mémoire
     if 'page' not in st.session_state:
@@ -2223,35 +2236,44 @@ if df_raw is not None:
 
                 # ONGLET 1 : EXPLORATION (NORMALITÉ)
                 # =========================================================================
+                # =========================================================================
+                # ONGLET 1 : EXPLORATION (NORMALITÉ) - AVEC CHOIX UTILISATEUR
+                # =========================================================================
+                # =========================================================================
+                # ONGLET 1 : EXPLORATION (NORMALITÉ) - AVEC Q-Q PLOT AJOUTÉ
+                # =========================================================================
+                # =========================================================================
+                # ONGLET 1 : EXPLORATION (NORMALITÉ) - VERSION COMPLÈTE AVEC DUEL
+                # =========================================================================
+                # =========================================================================
+                # ONGLET 1 : EXPLORATION (NORMALITÉ) - FINAL (AVEC TESTS DANS LE DUEL)
+                # =========================================================================
                 with tabs[1]:
                     st.header("1️⃣ Analyse de Distribution (Normalité)")
                     
-                    # --- INTRODUCTION PÉDAGOGIQUE (MISE À JOUR) ---
                     st.info("""
                     ### 🧐 De quoi s'agit-il ?
-                    Avant de comparer les notes, nous regardons la "forme" des données pour savoir si elles suivent une courbe en cloche (Loi Normale).
+                    Nous vérifions si les notes suivent une courbe en cloche (Loi Normale).
                     
-                    **🤖 Choix Automatique du Test :**
-                    L'application sélectionne le test mathématique le plus fiable selon le volume de données :
-                    
-                    * **Moins de 50 personnes** $\\rightarrow$ **Shapiro-Wilk** (Le microscope 🔬).
-                        * *Pourquoi ?* Il est très précis pour détecter les anomalies dans les petits groupes.
-                    * **Plus de 50 personnes** $\\rightarrow$ **Kolmogorov-Smirnov** (La vue d'ensemble 🔭).
-                        * *Pourquoi ?* Il est plus robuste et évite de rejeter la normalité pour des détails insignifiants sur les grands volumes (comme le Total).
+                    * **Moins de 50 réponses :** Le test **Shapiro-Wilk** est imposé (c'est le standard pour petits groupes).
+                    * **Plus de 50 réponses :** Vous pouvez choisir votre "juge" :
+                        * **Kolmogorov-Smirnov :** Le classique (compare la distribution globale).
+                        * **Shapiro-Wilk :** Très robuste, même pour les grands groupes.
+                        * **Anderson-Darling :** Plus sévère, il donne plus de poids aux valeurs extrêmes (les queues de distribution).
                     """)
                     
                     st.success("**❓ Question :** La répartition des scores est-elle équilibrée (Loi Normale) ?")
                     st.divider()
 
-                    # --- SÉLECTEURS ---
+                    # --- SÉLECTEURS PRINCIPAUX ---
                     c1, c2 = st.columns(2)
                     
-                    # 1. Choix du Groupe (Avec Total)
+                    # 1. Choix du Groupe (Pour analyse solo)
                     with c1:
                         options_with_total = ["🌍 Total (Tous les participants)"] + list(all_options)
-                        target_group = st.selectbox("1. Choisir un groupe à analyser :", options=options_with_total, key="norm_sel")
+                        target_group = st.selectbox("1. Choisir un groupe à analyser (Solo) :", options=options_with_total, key="norm_sel")
 
-                    # 2. Choix de la Variable
+                    # 2. Choix de la Variable (Score)
                     with c2:
                         candidates = [
                             "Total_par_repondeur", 
@@ -2265,11 +2287,10 @@ if df_raw is not None:
                         def get_nice_name(c):
                             if c == "Total_par_repondeur": return "🏆 Score Global"
                             if 'PARTIES_INFO' in globals() and c in PARTIES_INFO: return f"📂 {PARTIES_INFO[c]['short']}"
-                            # Fallback manuel
                             c_lower = c.lower().replace(" ", "")
-                            if "partie_2" in c_lower: return "📂 P2. Outils numériques"
-                            if "partie_3" in c_lower: return "📂 P3. Usages pédagogiques"
-                            if "partie_4" in c_lower: return "📂 P4. Compétences"
+                            if "partie_2" in c_lower: return "📂 P2. Fonctionnement"
+                            if "partie_3" in c_lower: return "📂 P3. Interventions"
+                            if "partie_4" in c_lower: return "📂 P4. Outils Num."
                             if "partie_5" in c_lower: return "📂 P5. Évaluation"
                             return c
 
@@ -2281,95 +2302,238 @@ if df_raw is not None:
                         else:
                             col_norm = None
                             st.error("❌ Aucune colonne de score trouvée.")
-                    
-                    # --- EXÉCUTION ---
-                    if st.button("🚀 Lancer l'analyse intelligente"):
-                        if col_norm:
-                            # LOGIQUE DE FILTRAGE
-                            if "Total" in target_group:
-                                data_norm = df[col_norm].dropna()
-                                clean_grp = "Tous les participants"
-                            else:
-                                clean_grp = target_group.replace("🟩 ", "")
-                                mask_grp = get_mask_for_status(clean_grp, df)
-                                data_norm = df[mask_grp][col_norm].dropna()
-                            
-                            N = len(data_norm)
-                            
-                            if N > 3:
-                                # --- INTELLIGENCE ARTIFICIELLE STATISTIQUE ---
-                                # Choix automatique du test selon la taille (N)
-                                if N < 50:
-                                    test_name = "Shapiro-Wilk (Microscope 🔬)"
-                                    stat_val, p_val = stats.shapiro(data_norm)
-                                    msg_size = "Petit groupe (N < 50)"
-                                else:
-                                    test_name = "Kolmogorov-Smirnov (Vue d'ensemble 🔭)"
-                                    # On compare les données à une loi normale théorique de même moyenne et écart-type
-                                    stat_val, p_val = stats.kstest(data_norm, 'norm', args=(data_norm.mean(), data_norm.std()))
-                                    msg_size = "Grand volume (N > 50)"
 
-                                # Résultats Chiffrés
-                                st.markdown(f"### 📊 Résultats : **{test_name}**")
-                                st.caption(f"Analyse basée sur : **{msg_size}** avec {N} participants.")
-                                
-                                k1, k2 = st.columns(2)
-                                k1.metric("Statistique", f"{stat_val:.3f}")
-                                k2.metric("p-value", f"{p_val:.5f}")
-                                
-                                # Interprétation
-                                if p_val < 0.05:
-                                    st.warning(f"⚠️ **Distribution NON Normale** (p < 0.05).")
-                                    st.write("La courbe s'éloigne significativement de la théorie. Pour les comparaisons, privilégiez les tests robustes (Kruskal-Wallis).")
-                                else:
-                                    st.success("✅ **Distribution Normale** (p > 0.05). La courbe est bien en forme de cloche.")
-                                
-                                # --- GRAPHIQUE ---
-                                st.markdown("---")
-                                st.subheader(f"Zoom sur : {sel_label}")
-                                
-                                fig_hist_norm = px.histogram(
-                                    data_norm, 
-                                    x=col_norm, 
-                                    nbins=20, 
-                                    histnorm='probability density',
-                                    color_discrete_sequence=['#85C1E9'], 
-                                    opacity=0.7 
-                                )
-                                
-                                x_range = np.linspace(data_norm.min(), data_norm.max(), 100)
-                                if data_norm.std() > 0:
-                                    y_normal = stats.norm.pdf(x_range, data_norm.mean(), data_norm.std())
-                                    fig_hist_norm.add_trace(go.Scatter(
-                                        x=x_range, y=y_normal, 
-                                        mode='lines', 
-                                        line=dict(color='#E74C3C', width=3), 
-                                        name='Modèle Théorique (Gauss)'
-                                    ))
-                                
-                                fig_hist_norm.update_layout(
-                                    title=f"Répartition des notes - {clean_grp}",
-                                    xaxis_title="Note obtenue",
-                                    yaxis_title="Fréquence",
-                                    plot_bgcolor="white",
-                                    bargap=0.05,
-                                    legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
-                                )
-                                fig_hist_norm.update_yaxes(showgrid=True, gridcolor='#f0f0f0')
-                                fig_hist_norm.update_xaxes(showgrid=False, linecolor='black')
-                                
-                                fig_hist_norm.data[0].name = 'Réalité (Vos données)'
-                                fig_hist_norm.data[0].showlegend = True
-                                
-                                st.plotly_chart(fig_hist_norm, use_container_width=True)
-                                
-
-                                
-                                
-                            else:
-                                st.error("⚠️ Pas assez de données pour ce groupe (N > 3 requis).")
+                    # --- PRÉ-CALCUL (Analyse Solo) ---
+                    if col_norm:
+                        if "Total" in target_group:
+                            data_norm = df[col_norm].dropna()
+                            clean_grp = "Tous les participants"
                         else:
-                            st.error("Variable invalide.")
+                            clean_grp = target_group.replace("🟩 ", "")
+                            mask_grp = get_mask_for_status(clean_grp, df)
+                            data_norm = df[mask_grp][col_norm].dropna()
+                        N = len(data_norm)
+                    else:
+                        N = 0
+                        data_norm = []
+
+                    # --- CHOIX DU TEST (CONDITIONNEL) ---
+                    algo_choisi = "Shapiro-Wilk"
+                    if N >= 50:
+                        st.markdown("---")
+                        st.write(f"📊 **Population analysée : {N} personnes.** (Suffisant pour choisir le test)")
+                        algo_choisi = st.radio(
+                            "Choisir l'algorithme de test :", 
+                            ["Kolmogorov-Smirnov", "Anderson-Darling", "Shapiro-Wilk"],
+                            horizontal=True
+                        )
+                    elif N > 0:
+                        st.caption(f"Population : {N} personnes. (Shapiro-Wilk appliqué automatiquement)")
+
+                    st.markdown("<br>", unsafe_allow_html=True)
+
+                    # --- EXÉCUTION ANALYSE SOLO ---
+                    if st.button("🚀 Lancer l'analyse de normalité (Solo)"):
+                        if N > 3:
+                            # Variables pour le résultat
+                            p_val = None
+                            stat_val = 0
+                            is_normal = False
+                            msg_detail = ""
+                            test_display = algo_choisi
+
+                            # 1. SHAPIRO-WILK
+                            if algo_choisi == "Shapiro-Wilk":
+                                stat_val, p_val = stats.shapiro(data_norm)
+                                if p_val > 0.05: is_normal = True
+                            
+                            # 2. KOLMOGOROV-SMIRNOV
+                            elif algo_choisi == "Kolmogorov-Smirnov":
+                                stat_val, p_val = stats.kstest(data_norm, 'norm', args=(data_norm.mean(), data_norm.std()))
+                                if p_val > 0.05: is_normal = True
+                            
+                            # 3. ANDERSON-DARLING
+                            elif algo_choisi == "Anderson-Darling":
+                                res = stats.anderson(data_norm, dist='norm')
+                                stat_val = res.statistic
+                                crit_val_5 = res.critical_values[2]
+                                if stat_val < crit_val_5:
+                                    is_normal = True
+                                    msg_detail = f"Statistique ({stat_val:.3f}) < Seuil ({crit_val_5:.3f})"
+                                else:
+                                    is_normal = False
+                                    msg_detail = f"Statistique ({stat_val:.3f}) > Seuil ({crit_val_5:.3f})"
+
+                            # --- RÉSULTATS ---
+                            st.markdown(f"### 📝 Résultat : {test_display}")
+                            k1, k2 = st.columns(2)
+                            k1.metric("Statistique", f"{stat_val:.3f}")
+                            
+                            if algo_choisi == "Anderson-Darling":
+                                k2.metric("Seuil (5%)", f"{res.critical_values[2]:.3f}")
+                                if is_normal:
+                                    st.success(f"🟢 **Distribution Normale**")
+                                    st.write(f"L'hypothèse de normalité est acceptée : {msg_detail}.")
+                                else:
+                                    st.error(f"⚡ **Distribution NON Normale**")
+                                    st.write(f"L'hypothèse de normalité est rejetée : {msg_detail}.")
+                            else:
+                                p_text = "< 0.001" if p_val < 0.001 else f"{p_val:.4f}"
+                                k2.metric("p-value", p_text)
+                                if is_normal:
+                                    st.success(f"🟢 **Distribution Normale** (p > 0.05)")
+                                    st.write("La répartition est équilibrée et suit une courbe en cloche.")
+                                else:
+                                    st.error(f"⚡ **Distribution NON Normale** (p < 0.05)")
+                                    st.write("La répartition s'écarte significativement de la courbe en cloche théorique.")
+
+                            # --- GRAPHIQUES SOLO ---
+                            st.divider()
+                            st.subheader("1. Histogramme & Courbe de Gauss")
+                            fig_hist_norm = px.histogram(
+                                data_norm, x=col_norm, nbins=25, histnorm='probability density',
+                                color_discrete_sequence=['#85C1E9'], opacity=0.7 
+                            )
+                            x_range = np.linspace(data_norm.min(), data_norm.max(), 100)
+                            if data_norm.std() > 0:
+                                y_normal = stats.norm.pdf(x_range, data_norm.mean(), data_norm.std())
+                                fig_hist_norm.add_trace(go.Scatter(
+                                    x=x_range, y=y_normal, mode='lines', 
+                                    line=dict(color='#E74C3C', width=3), name='Modèle Théorique (Gauss)'
+                                ))
+                            fig_hist_norm.update_layout(title=f"Répartition - {clean_grp}", xaxis_title="Note", yaxis_title="Fréquence", showlegend=True)
+                            st.plotly_chart(fig_hist_norm, use_container_width=True)
+
+                            st.subheader("2. Q-Q Plot (L'épreuve de vérité)")
+                            with st.expander("📘 Comment lire ce graphique ?"):
+                                st.markdown("* **Ligne rouge :** Normalité parfaite.\n* **Points :** Vos données.\n* Si les points suivent la ligne, c'est normal.")
+                            
+                            (osm, osr), (slope, intercept, r) = stats.probplot(data_norm, dist="norm", plot=None)
+                            fig_qq = go.Figure()
+                            fig_qq.add_trace(go.Scatter(x=osm, y=osr, mode='markers', name='Données', marker=dict(color='#3498db')))
+                            x_line = np.array([min(osm), max(osm)])
+                            fig_qq.add_trace(go.Scatter(x=x_line, y=slope*x_line + intercept, mode='lines', name='Normale', line=dict(color='#e74c3c', dash='dash')))
+                            fig_qq.update_layout(title="Q-Q Plot", xaxis_title="Théorique", yaxis_title="Observé")
+                            st.plotly_chart(fig_qq, use_container_width=True)
+                            
+                        else:
+                            st.error("⚠️ Pas assez de données (N > 3 requis).")
+                    
+                    # =========================================================
+                    # 🆕 COMPARAISON DUEL (AVEC AFFICHAGE DES TESTS)
+                    # =========================================================
+                    st.markdown("---")
+                    st.header("3️⃣ Comparaison de Normalité (Duel)")
+                    st.info("Comparez visuellement la distribution de deux groupes différents.")
+
+                    c_duo1, c_duo2 = st.columns(2)
+                    with c_duo1:
+                        grp_a_sel = st.selectbox("Groupe A (Bleu)", options=all_options, index=0, key="norm_duo_A")
+                    with c_duo2:
+                        grp_b_sel = st.selectbox("Groupe B (Rouge)", options=all_options, index=1 if len(all_options)>1 else 0, key="norm_duo_B")
+
+                    if st.button("⚔️ Comparer les distributions"):
+                        if col_norm:
+                            # Extraction des données A et B
+                            clean_a = grp_a_sel.replace("🟩 ", "")
+                            data_a = df[get_mask_for_status(clean_a, df)][col_norm].dropna()
+                            
+                            clean_b = grp_b_sel.replace("🟩 ", "")
+                            data_b = df[get_mask_for_status(clean_b, df)][col_norm].dropna()
+                            
+                            if len(data_a) > 3 and len(data_b) > 3:
+                                
+                                # --- FONCTION INTERNE POUR TEST AUTOMATIQUE ---
+                                def calculate_norm_test_auto(data):
+                                    n_local = len(data)
+                                    if n_local < 50:
+                                        s_val, p_v = stats.shapiro(data)
+                                        return "Shapiro-Wilk", p_v
+                                    elif n_local < 500:
+                                        s_val, p_v = stats.kstest(data, 'norm', args=(data.mean(), data.std()))
+                                        return "Kolmogorov-Smirnov", p_v
+                                    else:
+                                        try:
+                                            s_val, p_v = stats.normaltest(data)
+                                            return "D'Agostino K²", p_v
+                                        except:
+                                            s_val, p_v = stats.kstest(data, 'norm', args=(data.mean(), data.std()))
+                                            return "K-S (Fallback)", p_v
+
+                                # Calculs pour A et B
+                                name_test_a, p_a = calculate_norm_test_auto(data_a)
+                                name_test_b, p_b = calculate_norm_test_auto(data_b)
+
+                                # --- AFFICHAGE DES RÉSULTATS DES TESTS ---
+                                st.markdown("#### 📊 Résultats des tests de normalité")
+                                k_a, k_b = st.columns(2)
+                                
+                                with k_a:
+                                    st.info(f"Test utilisé : **{name_test_a}**")
+                                    p_txt_a = "< 0.001" if p_a < 0.001 else f"{p_a:.4f}"
+                                    st.metric(f"p-value ({clean_a})", p_txt_a)
+                                    if p_a > 0.05: st.caption("🟢 Distribution Normale")
+                                    else: st.caption("⚡ Distribution NON Normale")
+
+                                with k_b:
+                                    st.info(f"Test utilisé : **{name_test_b}**")
+                                    p_txt_b = "< 0.001" if p_b < 0.001 else f"{p_b:.4f}"
+                                    st.metric(f"p-value ({clean_b})", p_txt_b)
+                                    if p_b > 0.05: st.caption("🟢 Distribution Normale")
+                                    else: st.caption("⚡ Distribution NON Normale")
+
+                                st.divider()
+
+                                # --- 1. HISTOGRAMMES SUPERPOSÉS ---
+                                st.subheader("1. Histogrammes & Courbes de Gauss Comparés")
+                                fig_comp = go.Figure()
+                                
+                                # Groupe A (Bleu)
+                                fig_comp.add_trace(go.Histogram(
+                                    x=data_a, name=clean_a, histnorm='probability density',
+                                    marker_color='#3498db', opacity=0.5
+                                ))
+                                if data_a.std() > 0:
+                                    x_a = np.linspace(data_a.min(), data_a.max(), 100)
+                                    y_a = stats.norm.pdf(x_a, data_a.mean(), data_a.std())
+                                    fig_comp.add_trace(go.Scatter(x=x_a, y=y_a, mode='lines', line=dict(color='#2980b9', width=2), name=f"Gauss ({clean_a})"))
+
+                                # Groupe B (Rouge)
+                                fig_comp.add_trace(go.Histogram(
+                                    x=data_b, name=clean_b, histnorm='probability density',
+                                    marker_color='#e74c3c', opacity=0.5
+                                ))
+                                if data_b.std() > 0:
+                                    x_b = np.linspace(data_b.min(), data_b.max(), 100)
+                                    y_b = stats.norm.pdf(x_b, data_b.mean(), data_b.std())
+                                    fig_comp.add_trace(go.Scatter(x=x_b, y=y_b, mode='lines', line=dict(color='#c0392b', width=2), name=f"Gauss ({clean_b})"))
+
+                                fig_comp.update_layout(barmode='overlay', title="Superposition des Groupes", xaxis_title="Score", yaxis_title="Densité")
+                                st.plotly_chart(fig_comp, use_container_width=True)
+
+                                # --- 2. Q-Q PLOTS CÔTE À CÔTE ---
+                                st.subheader("2. Q-Q Plots Comparés")
+                                c_qq_a, c_qq_b = st.columns(2)
+                                
+                                # Fonction locale pour Q-Q Plot
+                                def draw_qq(data, title, col_dot, col_line):
+                                    (osm, osr), (slope, intercept, r) = stats.probplot(data, dist="norm", plot=None)
+                                    f = go.Figure()
+                                    f.add_trace(go.Scatter(x=osm, y=osr, mode='markers', marker=dict(color=col_dot, size=6, opacity=0.7)))
+                                    x_l = np.array([min(osm), max(osm)])
+                                    f.add_trace(go.Scatter(x=x_l, y=slope*x_l + intercept, mode='lines', line=dict(color=col_line, dash='dash')))
+                                    f.update_layout(title=title, showlegend=False, height=400, margin=dict(l=20, r=20, t=40, b=20))
+                                    return f
+
+                                with c_qq_a:
+                                    st.plotly_chart(draw_qq(data_a, f"Q-Q : {clean_a}", "#3498db", "#2980b9"), use_container_width=True)
+                                with c_qq_b:
+                                    st.plotly_chart(draw_qq(data_b, f"Q-Q : {clean_b}", "#e74c3c", "#c0392b"), use_container_width=True)
+
+                            else:
+                                st.error("⚠️ Données insuffisantes pour l'un des groupes (N > 3 requis).")
+                        else:
+                            st.error("Sélectionnez une variable (Score) en haut de la page.")
                     
                 # =========================================================================
                 # ONGLET 2 : COMPARAISONS (T-TEST, MANN-WHITNEY, ANOVA, KRUSKAL)
@@ -2546,139 +2710,185 @@ if df_raw is not None:
                     # =====================================================================
                     # B. COMPARAISON >2 GROUPES (ANOVA & KRUSKAL)
                     # =====================================================================
+                    # =====================================================================
+                    # B. COMPARAISON MULTI-GROUPES (MANUELLE) - STYLE HARMONISÉ
+                    # =====================================================================
+                    # =====================================================================
+                    # B. COMPARAISON MULTI-GROUPES (DENSITÉ) - STYLE HARMONISÉ
+                    # =====================================================================
                     with subtab_anova:
-                        st.subheader("Comparaison Multi-Groupes")
+                        st.subheader("Comparaison de 3 groupes ou plus")
                         
-                        # --- GUIDE PÉDAGOGIQUE (SÉLECTION) ---
                         st.info("""
-                        **💡 Guide : Que mettre dans 'Facteur de groupe' ?**
-                        C'est le critère qui divise vos participants en **3 équipes ou plus**.
-                        
-                        * ✅ **Bons choix :** Une variable catégorielle (Texte).
-                            * *Ex : Ancienneté (Débutant / Confirmé / Expert)*
-                            * *Ex : Niveau (CP / CE1 / CM2 / ...)*
-                            * *Ex : Zone (Rural / Urbain / REP)*
-                        * ❌ **À éviter ici :**
-                            * Les variables à 2 choix (H/F) $\rightarrow$ Utilisez l'onglet précédent "Duel".
-                            * Les scores chiffrés (Total_Score) $\rightarrow$ Utilisez l'onglet "Corrélations".
+                        **💡 Comment ça marche ?**
+                        Sélectionnez ci-dessous les groupes spécifiques que vous souhaitez comparer entre eux (ex: M1 vs M2 vs Titulaire).
+                        Il faut en choisir **au moins 3** pour lancer l'analyse.
                         """)
                         
                         if total_cols:
-                            target_col = total_cols[0]
-                            avail_cols = [c for c in df.columns if c != target_col]
-                            
-                            # --- FILTRAGE LOCAL AJOUTÉ ---
-                            c_filt1, c_filt2 = st.columns([1, 2])
-                            filter_pop = c_filt1.selectbox("Qui inclure ?", ["Tout le monde"] + list(all_options), key="anova_filter_local")
-                            
-                            if filter_pop == "Tout le monde":
-                                df_filtered = df.copy()
+                            # 1. Choix de la variable (Score)
+                            if 'metric_options' in locals():
+                                sel_label_multi = st.selectbox("Variable à comparer (Score) :", options=list(metric_options.keys()), key="anova_met_v3")
+                                target_col = metric_options[sel_label_multi]
                             else:
-                                clean_pop = filter_pop.replace("🟩 ", "")
-                                mask_pop = get_mask_for_status(clean_pop, df)
-                                df_filtered = df[mask_pop].copy()
-                            # ----------------------------------------------------
+                                target_col = st.selectbox("Variable à comparer (Score) :", total_cols, key="anova_met_simple")
 
-                            # Essai de détection auto de "ancienneté"
-                            def_idx = next((i for i, c in enumerate(avail_cols) if "ancien" in c.lower()), 0)
+                            st.markdown("---")
+
+                            # 2. SÉLECTION DES GROUPES (MULTIPLE)
+                            # On pré-sélectionne les 3 premiers pour l'exemple
+                            defaults_multi = all_options[:3] if len(all_options) >= 3 else all_options
                             
-                            col_group = st.selectbox("Facteur de groupe (Variable explicative) :", avail_cols, index=def_idx, key="anova_grp")
+                            selected_groups = st.multiselect(
+                                "Sélectionnez les groupes à comparer (Min. 3) :",
+                                options=all_options,
+                                default=defaults_multi,
+                                key="anova_multiselect"
+                            )
                             
-                            # ==========================================================
-                            # 🚀 LE FAMEUX BOUTON POUR LANCER LE TEST
-                            # ==========================================================
-                            if st.button("🚀 Lancer l'Analyse (Levene, ANOVA & Kruskal)", type="primary"):
+                            st.markdown("---")
+
+                            # 🚀 BOUTON LANCER
+                            if st.button("🚀 Lancer l'Analyse Multi-Groupes", type="primary"):
                                 
-                                with st.spinner("Calculs statistiques en cours..."):
-                                    # Préparation Données (AVEC df_filtered maintenant)
-                                    df_anova = df_filtered.dropna(subset=[col_group, target_col]).copy()
-                                    df_anova[col_group] = df_anova[col_group].astype(str)
-                                    grps = [df_anova[df_anova[col_group] == g][target_col] for g in sorted(df_anova[col_group].unique())]
-                                    
-                                    # VÉRIFICATION : A-t-on assez de groupes ?
-                                    if len(grps) > 2 and all(len(g) > 1 for g in grps):
+                                if len(selected_groups) < 3:
+                                    st.error("⚠️ Veuillez sélectionner au moins 3 groupes pour effectuer une comparaison multi-groupes.")
+                                else:
+                                    with st.spinner("Calculs statistiques en cours..."):
                                         
-                                        # --- 1. TEST DE LEVENE (HOMOGÉNÉITÉ) ---
-                                        st.markdown("##### 1. Vérification des Variances (Levene)")
-                                        try:
-                                            stat_levene, p_levene = stats.levene(*grps)
-                                            if p_levene > 0.05:
-                                                st.success(f"✅ Variances homogènes (p={p_levene:.3f}). L'ANOVA classique est valide.")
-                                            else:
-                                                st.warning(f"⚠️ Variances différentes (p={p_levene:.3f}). Privilégiez Welch ou Kruskal-Wallis ci-dessous.")
-                                        except:
-                                            st.info("Levene non calculable (Variance nulle dans un groupe ?).")
-
-                                        # --- 2. ANOVA (PARAMÉTRIQUE) ---
-                                        f_stat, p_anova = stats.f_oneway(*grps)
+                                        # --- PRÉPARATION DES DONNÉES ---
+                                        dfs_to_concat = []
+                                        groups_list_arrays = [] 
                                         
-                                        # --- 3. KRUSKAL-WALLIS (NON-PARAMÉTRIQUE) ---
-                                        try: k_stat, p_kruskal = stats.kruskal(*grps)
-                                        except: p_kruskal = 1.0
-
-                                        # --- AFFICHAGE RÉSULTATS ---
-                                        st.markdown("#### 📊 Résultats Comparés")
-                                        c1, c2 = st.columns(2)
-                                        
-                                        with c1:
-                                            st.info("🟦 **ANOVA (Moyennes)**")
-                                            st.metric("p-value", f"{p_anova:.5f}")
-                                            if p_anova < 0.05: st.success("✅ Différence détectée")
-                                            else: st.warning("❌ Pas d'effet significatif")
-                                        
-                                        with c2:
-                                            st.info("🟧 **Kruskal-Wallis (Rangs)**")
-                                            st.metric("p-value", f"{p_kruskal:.5f}")
-                                            if p_kruskal < 0.05: st.success("✅ Différence détectée")
-                                            else: st.warning("❌ Pas d'effet significatif")
-
-                                        st.markdown("---")
-
-                                        # --- EXPLICATION PÉDAGOGIQUE ---
-                                        with st.expander("🎓 Comprendre : Comment analyser ces 3 étapes ?"):
-                                            st.markdown("""
-                                            Pour comparer 3 groupes ou plus (ex: *M1 vs M2 vs Titulaires*), l'analyse se fait en étapes :
-
-                                            ### 1. Le Test de Levene (Le Vigile) 👮‍♂️
-                                            * **Son rôle :** Il vérifie si les groupes sont comparables (ont-ils la même dispersion ?).
-                                            * **Si Vert (p > 0.05) :** C'est parfait, les groupes sont équilibrés.
-                                            * **Si Orange (p < 0.05) :** Les variances sont inégales. Dans ce cas, méfiez-vous de l'ANOVA et faites confiance à **Kruskal-Wallis**.
-
-                                            ### 2. ANOVA vs Kruskal-Wallis (Les Juges) ⚖️
-                                            Ces deux tests répondent à la question : *"Y a-t-il au moins un groupe différent des autres ?"*
-                                            * **🟦 ANOVA (Moyennes) :** Très puissant, mais sensible aux notes extrêmes.
-                                            * **🟧 Kruskal-Wallis (Rangs) :** Le "4x4" des statistiques. Il classe tous les enseignants du 1er au dernier et regarde si un groupe truste le haut du classement.
-
-                                            ### 3. Le Test de Tukey (L'Enquêteur) 🕵️‍♂️
-                                            * **Le problème :** L'ANOVA dit juste "Il y a une différence", mais ne dit pas où !
-                                            * **La solution :** Si l'ANOVA est significative, le tableau de **Tukey** compare les groupes 2 par 2 pour trouver le coupable : *"C'est le groupe M2 qui est différent des Titulaires."*
-                                            """)
-
-                                        st.markdown("---")
-                                        
-                                        # Boxplot
-                                        st.subheader("Visualisation par Boîtes à Moustaches")
-                                        fig_box = px.box(df_anova.sort_values(col_group), x=col_group, y=target_col, color=col_group, points="outliers")
-                                        st.plotly_chart(fig_box, use_container_width=True)
-
-                                        # --- 4. POST-HOC (TUKEY) ---
-                                        if p_anova < 0.05:
-                                            st.divider()
-                                            st.subheader("🕵️‍♂️ Analyse Post-Hoc (Test de Tukey)")
-                                            st.info("L'ANOVA dit qu'il y a une différence. Tukey nous dit ENTRE QUI.")
+                                        for grp_name in selected_groups:
+                                            clean_name = grp_name.replace("🟩 ", "")
+                                            mask = get_mask_for_status(clean_name, df)
+                                            sub_data = df.loc[mask, [target_col]].dropna()
                                             
-                                            try:
-                                                from statsmodels.stats.multicomp import pairwise_tukeyhsd
-                                                tukey = pairwise_tukeyhsd(endog=df_anova[target_col], groups=df_anova[col_group], alpha=0.05)
+                                            # Pour Tukey et Graphiques
+                                            sub_df = sub_data.copy()
+                                            sub_df['Groupe_Analyse'] = clean_name
+                                            dfs_to_concat.append(sub_df)
+                                            
+                                            # Pour les tests stats
+                                            groups_list_arrays.append(sub_data[target_col])
+                                        
+                                        if dfs_to_concat:
+                                            df_anova = pd.concat(dfs_to_concat)
+                                        else:
+                                            df_anova = pd.DataFrame()
+
+                                        # VÉRIFICATION
+                                        if all(len(g) > 1 for g in groups_list_arrays):
+                                            
+                                            # --- CALCULS STATISTIQUES ---
+                                            try: stat_levene, p_levene = stats.levene(*groups_list_arrays)
+                                            except: p_levene = 0 
                                                 
-                                                res_tukey = pd.DataFrame(data=tukey.summary().data[1:], columns=tukey.summary().data[0])
-                                                res_tukey = res_tukey.rename(columns={"group1": "Groupe A", "group2": "Groupe B", "p-adj": "p-value", "reject": "Significatif ?"})
+                                            f_stat, p_anova = stats.f_oneway(*groups_list_arrays)
+                                            
+                                            try: k_stat, p_kruskal = stats.kruskal(*groups_list_arrays)
+                                            except: p_kruskal = 1.0
+
+                                            # --- AFFICHAGE RÉSULTATS ---
+                                            if p_levene > 0.05:
+                                                st.success(f"✅ **Conditions remplies (Levene p={p_levene:.3f})** : Variances homogènes. Regardez l'ANOVA (Bleu).")
+                                            else:
+                                                st.warning(f"⚠️ **Attention (Levene p={p_levene:.3f})** : Variances inégales. Regardez Kruskal-Wallis (Orange).")
+                                            
+                                            st.markdown("### 📊 Résultats Comparés")
+                                            col_res1, col_res2 = st.columns(2)
+                                            
+                                            with col_res1:
+                                                st.info("🟦 **ANOVA (Moyennes)**")
+                                                st.metric("p-value", f"{p_anova:.5f}")
+                                                if p_anova < 0.05: st.success("✅ Différence Significative")
+                                                else: st.warning("❌ Pas de différence")
+
+                                            with col_res2:
+                                                st.info("🟧 **Kruskal-Wallis (Rangs)**")
+                                                st.metric("p-value", f"{p_kruskal:.5f}")
+                                                if p_kruskal < 0.05: st.success("✅ Différence Significative")
+                                                else: st.warning("❌ Pas de différence")
+
+                                            st.markdown("---")
+                                            
+                                            # --- VISUALISATION (DENSITÉ - COMME DUEL) ---
+                                            st.subheader("Visualisation des distributions (Courbes de densité)")
+                                            
+                                            # Création de la figure vide
+                                            fig_dist = go.Figure()
+                                            
+                                            # Calcul d'une plage X commune pour que les courbes soient alignées
+                                            min_x = df_anova[target_col].min()
+                                            max_x = df_anova[target_col].max()
+                                            # On ajoute un peu de marge (padding)
+                                            padding = (max_x - min_x) * 0.1 if (max_x != min_x) else 1
+                                            x_range = np.linspace(min_x - padding, max_x + padding, 500)
+                                            
+                                            # Boucle pour ajouter une courbe par groupe
+                                            # On utilise une palette de couleurs pour distinguer les groupes
+                                            colors = px.colors.qualitative.Plotly # Palette par défaut
+                                            
+                                            for i, grp in enumerate(selected_groups):
+                                                clean_grp = grp.replace("🟩 ", "")
+                                                subset = df_anova[df_anova['Groupe_Analyse'] == clean_grp][target_col]
                                                 
-                                                st.dataframe(res_tukey.style.applymap(lambda v: 'background-color: #d4edda' if v else 'background-color: #f8d7da', subset=['Significatif ?']))
-                                            except:
-                                                st.error("Librairie statsmodels manquante.")
-                                    else:
-                                        st.error("Données insuffisantes ou il n'y a pas assez de groupes valides (minimum 3 groupes avec au moins 2 personnes chacun) pour lancer ce test.")
+                                                if len(subset) > 1 and subset.std() > 0:
+                                                    try:
+                                                        # Calcul de la courbe lissée (KDE)
+                                                        kde = stats.gaussian_kde(subset)
+                                                        y_vals = kde(x_range)
+                                                        
+                                                        # Ajout de la trace
+                                                        fig_dist.add_trace(go.Scatter(
+                                                            x=x_range,
+                                                            y=y_vals,
+                                                            mode='lines',
+                                                            name=clean_grp,
+                                                            fill='tozeroy', # C'est ça qui fait l'effet "Aire remplie"
+                                                            line=dict(width=2),
+                                                            opacity=0.3 # Transparence pour voir les superpositions
+                                                        ))
+                                                    except:
+                                                        pass # Ignorer si erreur mathématique sur un groupe trop petit
+
+                                            fig_dist.update_layout(
+                                                title=f"Comparaison des densités : {get_nice_name_comp(target_col)}",
+                                                xaxis_title="Score / Note",
+                                                yaxis_title="Densité (Fréquence)",
+                                                legend_title="Groupes",
+                                                height=500
+                                            )
+                                            st.plotly_chart(fig_dist, use_container_width=True)
+
+                                            # --- POST-HOC (TUKEY) ---
+                                            if p_anova < 0.05:
+                                                st.divider()
+                                                st.subheader("🕵️‍♂️ Qui est différent de qui ? (Test de Tukey)")
+                                                st.info("Tableau des différences significatives paire par paire :")
+                                                
+                                                try:
+                                                    from statsmodels.stats.multicomp import pairwise_tukeyhsd
+                                                    tukey = pairwise_tukeyhsd(endog=df_anova[target_col], groups=df_anova['Groupe_Analyse'], alpha=0.05)
+                                                    
+                                                    res_tukey = pd.DataFrame(data=tukey.summary().data[1:], columns=tukey.summary().data[0])
+                                                    res_tukey = res_tukey.rename(columns={"group1": "Groupe A", "group2": "Groupe B", "p-adj": "p-value", "reject": "Significatif ?"})
+                                                    
+                                                    st.dataframe(
+                                                        res_tukey.style.applymap(
+                                                            lambda v: 'background-color: #d4edda; color: #155724; font-weight: bold;' if v else '', 
+                                                            subset=['Significatif ?']
+                                                        ),
+                                                        use_container_width=True
+                                                    )
+                                                except Exception as e:
+                                                    st.error(f"Erreur calcul Tukey : {e}")
+                                        
+                                        else:
+                                            st.error("⚠️ Données insuffisantes. Certains groupes sélectionnés ont moins de 2 réponses valides.")
+                        else:
+                            st.warning("Aucune colonne de score disponible.")
 
                 # =========================================================================
                 # ONGLET 3 : ASSOCIATIONS (CORRÉLATIONS & CHI-2)
@@ -2691,7 +2901,7 @@ if df_raw is not None:
                     Nous explorons ici les liens statistiques pour voir si les réponses diffèrent selon les groupes.
                     
                     * **Corrélations (Variables Numériques) :**
-                        * **Pearson :** Lien linéaire (ex: Plus l'année d'étude est élevée, plus le score de connaissances IA augmente).
+                        * **Pearson :** Lien linéaire (ex: Plus l'année d'étude est élevée, plus le score de connaissances augmente).
                         * **Spearman :** Lien de rang (ex: Est-ce que le niveau de stress évolue dans le même sens que la fréquence d'utilisation ?).
                     * **Chi-2 (Variables Catégorielles - Comparaison de groupes) :**
                         * Permet de voir si **le Statut (Étudiant vs Enseignant)** influence significativement une réponse donnée.
@@ -2740,8 +2950,15 @@ if df_raw is not None:
                             
                             # Calcul dynamique de la matrice
                             corr_mat = df_mat.corr(method=method_code).round(2)
+                            fig_heat = px.imshow(
+                                corr_mat,
+                                text_auto=True,
+                                color_continuous_scale="RdBu", # <--- Enlevez le "_r" ici pour que 1 soit Bleu
+                                zmin=-1,
+                                zmax=1,
+                                title=f"Matrice ({method})"
+                            )
                             
-                            fig_heat = px.imshow(corr_mat, text_auto=True, color_continuous_scale="RdBu_r", zmin=-1, zmax=1, title=f"Matrice ({method})")
                             st.plotly_chart(fig_heat, use_container_width=True)
                             
                             if "Spearman" in method:
@@ -2797,69 +3014,209 @@ if df_raw is not None:
                             st.warning("Pas assez de colonnes de scores disponibles pour faire des corrélations.")
 
                     # --- CHI-2 & CRAMER ---
+                    # =========================================================================
+                    # ONGLET 3B : CHI-2 (CATÉGORIEL) - AVEC SÉLECTION DE GROUPES
+                    # =========================================================================
+                    # =========================================================================
+                    # ONGLET 3B : CHI-2 (CATÉGORIEL) - AVEC FILTRE QUALITATIF INTELLIGENT
+                    # =========================================================================
+                    # =========================================================================
+                    # =========================================================================
+                    # =========================================================================
+                    # =========================================================================
+                    # ONGLET 3B : CHI-2 (CATÉGORIEL) - UI DESIGN & FILTRES PROPRES
+                    # =========================================================================
                     with subtab_chi2:
-                        st.subheader("Indépendance (Chi-2)")
+                        st.markdown("### 🎭 Test d'Indépendance (Chi-2)")
                         
-                        if col_statut and col_plan:
-                            # MODIFICATION ICI : Liste de TOUTES les colonnes sauf le statut lui-même
-                            # On exclut la colonne utilisée comme pivot (col_statut) pour ne pas croiser "Statut" avec "Statut"
-                            liste_variables_dispo = [c for c in df.columns if c != col_statut]
-                            
-                            var_col = st.selectbox("Croiser le Statut (Étudiant/Enseignant) avec :", liste_variables_dispo)
-                            
-                            ct = pd.crosstab(df_corr[col_statut], df_corr[var_col])
-                            
-                            # Calcul Chi-2
-                            chi2, p, dof, ex = stats.chi2_contingency(ct)
-                            
-                            # Calcul V de Cramer (Taille d'effet)
-                            n = ct.sum().sum()
-                            min_dim = min(ct.shape) - 1
-                            v_cramer = np.sqrt((chi2/n) / min_dim) if min_dim > 0 else 0
-                            
-                            c1, c2 = st.columns(2)
-                            c1.metric("p-value (Chi-2)", f"{p:.4f}")
-                            c2.metric("V de Cramer (Force)", f"{v_cramer:.3f}")
-                            
-                            if p < 0.05:
-                                st.success(f"✅ **Lien Significatif.** Le statut (Étudiant/Enseignant) influence la réponse.")
-                                # Interprétation de la force
-                                if v_cramer < 0.10: strength = "Négligeable"
-                                elif v_cramer < 0.30: strength = "Faible"
-                                elif v_cramer < 0.50: strength = "Moyenne"
-                                else: strength = "Forte"
-                                st.info(f"💪 Force du lien : **{strength}**")
+                        with st.expander("📘 Comprendre ce test "):
+                            st.markdown("""
+                            Ce test sert à détecter des **différences de comportement** entre deux groupes.
+                            * **Exemple :** Est-ce que les *Stagiaires* répondent "Oui" plus souvent que les *Titulaires* ?
+                            * **Il ne marche pas avec les notes (0-20)**, mais uniquement avec des **catégories** (Oui/Non, Choix A/B/C...).
+                            """)
+                        
+                        st.write("Configurez votre comparaison ci-dessous :")
+                        
+                        # --- ZONE DE SÉLECTION (Design en colonnes) ---
+                        c_sel_1, c_sel_2 = st.columns(2)
+                        
+                        # 1. SÉLECTION DES GROUPES
+                        with c_sel_1:
+                            defaults_chi2 = all_options[:2] if len(all_options) >= 2 else all_options
+                            selected_groups_chi2 = st.multiselect(
+                                "👥 1. Qui voulez-vous comparer ?",
+                                options=all_options,
+                                default=defaults_chi2,
+                                help="Choisissez au moins 2 groupes (ex: FI vs FC).",
+                                key="chi2_groups_multiselect"
+                            )
+                        
+                        # 2. SÉLECTION DE LA QUESTION (FILTRE NETTOYÉ)
+                        with c_sel_2:
+                            if col_statut:
+                                cols_qualitatives = []
+                                
+                                # --- LISTE NOIRE (Mots à bannir) ---
+                                mots_interdits = [
+                                    'score', 'total', 'moyenne', 'id de la', 'pct_', 'pac_', 'merci de cliquer', # Technique
+                                    'acad_key', # Clé technique académie
+                                    '[autre]', # Champs texte libre
+                                    'zone géographique', # Trop détaillé
+                                    'depuis combien d’années', # Ancienneté (Quantitatif déguisé)
+                                    '5 dernières années', # Historique formations
+                                    'dans quel cadre' # Contexte formations
+                                ]
+
+                                for c in df.columns:
+                                    if c == col_statut: continue
+                                    
+                                    c_str = str(c).strip()
+                                    c_lower = c_str.lower()
+                                    
+                                    # A. Filtre par Mots-clés
+                                    if any(x in c_lower for x in mots_interdits):
+                                        continue
+                                    
+                                    # B. Filtre par Parties (On exclut les quiz 2, 3, 4, 5)
+                                    if c_str.startswith(('2.', '3.', '4.', '5.')):
+                                        continue
+                                        
+                                    # C. Critère de Taille (Catégories pures)
+                                    num_unique = df[c].nunique()
+                                    
+                                    # On garde si peu de choix (<30) OU si c'est une info clé (Académie, Plan...)
+                                    if num_unique < 30 or "académie" in c_lower or "plan" in c_lower:
+                                        cols_qualitatives.append(c)
+                                
+                                # Pré-sélection intelligente
+                                def_idx_q = next((i for i, c in enumerate(cols_qualitatives) if "plan" in c.lower()), 0)
+                                
+                                var_col = st.selectbox(
+                                    "❓ 2. Sur quel sujet (Question) ?", 
+                                    cols_qualitatives, 
+                                    index=def_idx_q,
+                                    help="Seules les questions 'à choix' (Qualitatives) apparaissent ici.",
+                                    key="chi2_var_select"
+                                )
                             else:
-                                st.warning("❌ **Indépendance.** Pas de lien statistique détecté entre le statut et cette réponse.")
-                            
-                            st.plotly_chart(px.imshow(ct, text_auto=True, title="Carte de Chaleur des Effectifs"), use_container_width=True)
-                        else:
-                            st.error("Variables catégorielles (Statut ou Plan) introuvables.")
+                                st.error("Colonne de statut introuvable.")
+                                var_col = None
+
+                        st.markdown("---")
+
+                        # --- BOUTON D'ACTION CENTRÉ ---
+                        col_btn_L, col_btn_C, col_btn_R = st.columns([1, 2, 1])
+                        with col_btn_C:
+                            lancer_chi2 = st.button("🚀 Lancer la comparaison (Chi-2)", use_container_width=True)
+
+                        if lancer_chi2:
+                            if len(selected_groups_chi2) < 2:
+                                st.error("⚠️ Il faut au moins 2 groupes pour faire un match !")
+                            elif var_col:
+                                # --- PRÉPARATION DES DONNÉES ---
+                                dfs_chi2 = []
+                                for grp_name in selected_groups_chi2:
+                                    clean_name = grp_name.replace("🟩 ", "")
+                                    mask = get_mask_for_status(clean_name, df)
+                                    sub_data = df.loc[mask, [var_col]].copy()
+                                    sub_data['Groupe_Comparaison'] = clean_name
+                                    dfs_chi2.append(sub_data)
+                                
+                                if dfs_chi2:
+                                    df_final_chi2 = pd.concat(dfs_chi2)
+                                    df_final_chi2 = df_final_chi2.dropna(subset=[var_col])
+                                    
+                                    # Tableau Croisé
+                                    ct = pd.crosstab(df_final_chi2['Groupe_Comparaison'], df_final_chi2[var_col])
+                                    
+                                    if ct.empty or ct.shape[0] < 2 or ct.shape[1] < 2:
+                                        st.warning("⚠️ Impossible de comparer : Tout le monde a donné la même réponse ou il n'y a pas assez de données.")
+                                    else:
+                                        # --- CALCULS ---
+                                        chi2, p, dof, ex = stats.chi2_contingency(ct)
+                                        
+                                        n = ct.sum().sum()
+                                        min_dim = min(ct.shape) - 1
+                                        v_cramer = np.sqrt((chi2/n) / min_dim) if min_dim > 0 and n > 0 else 0
+                                        
+                                        # --- RÉSULTATS VISUELS ---
+                                        st.markdown(f"#### 🔎 Résultats pour : *{var_col}*")
+                                        
+                                        c_res1, c_res2 = st.columns(2)
+                                        
+                                        with c_res1:
+                                            # Affichage P-value
+                                            p_txt = "< 0.001" if p < 0.001 else f"{p:.4f}"
+                                            st.metric("p-value (Probabilité)", p_txt)
+                                            
+                                            if p < 0.05:
+                                                st.error("⚡ **Différence Significative**")
+                                                st.caption("Le groupe d'appartenance **influence** la réponse.")
+                                            else:
+                                                st.success("🧘 **Pas de différence**")
+                                                st.caption("Les groupes répondent globalement de la **même manière**.")
+
+                                        with c_res2:
+                                            # Affichage Cramer
+                                            st.metric("V de Cramer (Intensité)", f"{v_cramer:.2f}")
+                                            if v_cramer < 0.10: strength = "Négligeable"
+                                            elif v_cramer < 0.30: strength = "Faible"
+                                            elif v_cramer < 0.50: strength = "Moyenne"
+                                            else: strength = "Forte"
+                                            st.info(f"Force du lien : **{strength}**")
+
+                                        st.divider()
+                                        
+                                        # --- VISUALISATION ---
+                                        st.subheader("📊 Visualisation des effectifs")
+                                        
+                                        # Heatmap propre
+                                        fig_chi2 = px.imshow(
+                                            ct, text_auto=True, aspect="auto", color_continuous_scale="Blues",
+                                            labels=dict(x="Réponse donnée", y="Groupe", color="Nombre de personnes")
+                                        )
+                                        fig_chi2.update_layout(title="Qui a répondu quoi ?")
+                                        st.plotly_chart(fig_chi2, use_container_width=True)
+                                        
+                                        # Tableau de pourcentages
+                                        with st.expander("Voir le détail en Pourcentages (%)"):
+                                            st.write("Ce tableau montre la répartition au sein de chaque groupe (Total ligne = 100%).")
+                                            ct_pct = pd.crosstab(df_final_chi2['Groupe_Comparaison'], df_final_chi2[var_col], normalize='index') * 100
+                                            st.dataframe(ct_pct.style.format("{:.1f}%"), use_container_width=True)
+                                else:
+                                    st.warning("Aucune donnée trouvée pour ces groupes.")
+                            else:
+                                st.error("Veuillez sélectionner une question.")
 
                 
                 # ONGLET 4 : STRUCTURE & PSYCHOMETRIE
-                # =========================================================================
                 with tabs[4]:
                     st.header("4️⃣ Structure & Psychométrie")
                     
-                    # --- BLOC D'EXPLICATION (ENCADRÉ BLEU) ---
+                    # --- BLOC D'EXPLICATION ---
                     st.info("""
                     ### 🧐 De quoi s'agit-il ?
-                    Nous ne regardons plus les *réponses*, mais la **qualité des questions**. Nous vérifions si le questionnaire est un instrument de mesure fiable.
-                    
-                    * **Fiabilité (Alpha de Cronbach) :** Mesure la cohérence interne. Si un enseignant/étudiant est "bon", il doit réussir toutes les questions difficiles. Si les réponses partent dans tous les sens, la fiabilité est basse.
-                    * **Structure (ACP) :** Vérifie combien de "compétences" ou dimensions cachées le questionnaire mesure réellement (1 seule compétence globale ? ou 3 compétences distinctes ?).
+                    Nous vérifions la **qualité des questions** (items) pour savoir si le questionnaire est fiable.
+                    * **Fiabilité (Alpha de Cronbach) :** Mesure la cohérence interne ("Est-ce que ça se tient ?").
+                    * **Structure (ACP) :** Vérifie les dimensions cachées ("Combien de compétences différentes ?").
                     """)
 
-                    # --- LA QUESTION (ENCADRÉ VERT) ---
-                    st.success("""
-                    **❓ La Question posée :** "Mon questionnaire est-il cohérent et mesure-t-il bien ce qu'il est censé mesurer ?"
-                    """)
-                    
+                    with st.expander("🧠 Comment ça marche (Simple) ?"):
+                        st.markdown("""
+                        L'algorithme regarde les notes de chaque question et cherche des modèles :
+                        
+                        * **Alpha de Cronbach :**
+                        > *"Est-ce que les élèves qui ont de bonnes notes à la question A ont aussi tendance à avoir de bonnes notes aux questions B, C... ?"*
+                        Si OUI (> 0.7) 🟢 = Cohérent. Si NON (< 0.6) 🔴 = Cacophonie.
+
+                        * **ACP (Analyse en Composantes Principales) :**
+                        Elle essaie de résumer toutes vos questions en quelques "Super-Matières" (Dimensions).
+                        """)
+
                     st.divider()
 
-                    # --- FILTRAGE LOCAL AJOUTÉ (Sans modifier le reste) ---
-                    st.write("### 1. Population à cartographier")
+                    # --- 1. POPULATION ---
                     c_acp1, c_acp2 = st.columns([1, 2])
                     filter_acp = c_acp1.selectbox("Qui inclure ?", ["Tout le monde"] + list(all_options), key="acp_filter")
                     
@@ -2870,96 +3227,177 @@ if df_raw is not None:
                         mask_acp = get_mask_for_status(clean_acp, df)
                         df_acp = df[mask_acp].copy()
                         
-                    c_acp2.success(f"🗺️ Cartographie de **{len(df_acp)}** participants.")
+                    c_acp2.success(f"🗺️ Analyse sur **{len(df_acp)}** participants.")
                     st.divider()
+
                     # ----------------------------------------------------
+                    # 2. SÉLECTION SIMPLE DES ITEMS (SANS TOTAUX)
+                    # ----------------------------------------------------
+                    st.subheader("🛠️ Choix des questions")
 
-                    # 1. SÉLECTION DES ITEMS
-                    tech_cols = [c for c in df_acp.columns if str(c).startswith('score_')]
-                    sel_cols = st.multiselect("Sélectionner les items (Questions notées) à analyser :", tech_cols, default=tech_cols[:10])
-                    
-                    if len(sel_cols) > 2:
-                        # Nettoyage des données pour l'analyse
-                        df_psy = df_acp[sel_cols].apply(pd.to_numeric, errors='coerce').fillna(0)
-                        # On retire les colonnes où tout le monde a la même note (Variance nulle)
-                        df_psy = df_psy.loc[:, df_psy.var() > 0]
-                        
-                        # --- A. FIABILITÉ (CRONBACH) ---
-                        st.subheader("🅰️ Fiabilité (Alpha de Cronbach)")
-                        
-                        # Calcul manuel de l'Alpha
-                        k = df_psy.shape[1]
-                        var_item = df_psy.var(ddof=1).sum()
-                        var_tot = df_psy.sum(axis=1).var(ddof=1)
-                        
-                        if var_tot > 0:
-                            alpha = (k / (k - 1)) * (1 - (var_item / var_tot))
-                        else:
-                            alpha = 0
-                        
-                        c1, c2 = st.columns([1, 3])
-                        c1.metric("Score Alpha", f"{alpha:.3f}")
-                        
-                        with c2:
-                            if alpha > 0.9: st.success("🌟 **Excellent.** Cohérence interne très forte.")
-                            elif alpha > 0.7: st.success("✅ **Bon.** Le questionnaire est fiable.")
-                            elif alpha > 0.6: st.warning("⚠️ **Acceptable.** Mais un peu fragile.")
-                            else: st.error("❌ **Faible.** Les questions ne semblent pas mesurer la même chose.")
-                        
-                        st.markdown("---")
+                    # A. Récupération de la liste complète
+                    all_items_map = {} # {Nom Affiché : Nom Colonne Réelle}
+                    all_labels_list = []
 
-                        # --- B. STRUCTURE (ACP) ---
-                        st.subheader("🅱️ Validité Structurelle (ACP)")
-                        
-                        if SKLEARN_AVAILABLE:
-                            st.write("Analyse des dimensions latentes (Eboulis des valeurs propres).")
+                    for c in df_acp.columns:
+                        c_lower = str(c).lower()
+                        # On prend les colonnes "score_", MAIS PAS les totaux, PAS les moyennes
+                        if "score_" in c_lower and "total" not in c_lower and df_acp[c].dtype in [np.float64, np.int64]:
                             
-                            try:
-                                scaler = StandardScaler()
-                                X_scaled = scaler.fit_transform(df_psy)
-                                
-                                # 🛠️ CORRECTION ICI : On prend le minimum entre le nombre de participants (shape[0]), 
-                                # le nombre de questions restantes (shape[1]) et 10.
-                                n_comps_max = min(df_psy.shape[0], df_psy.shape[1], 10)
-                                
-                                pca = PCA(n_components=n_comps_max)
-                                pca.fit(X_scaled)
-                                
-                                exp_var = pca.explained_variance_ratio_ * 100
-                                cum_var = np.cumsum(exp_var)
-                                
-                                # Graphique combiné (Barres + Courbe)
-                                fig_scree = go.Figure()
-                                fig_scree.add_trace(go.Bar(
-                                    x=[f"Dim {i+1}" for i in range(n_comps_max)], 
-                                    y=exp_var, 
-                                    name='Variance Expliquée (%)',
-                                    marker_color='#3498db'
-                                ))
-                                fig_scree.add_trace(go.Scatter(
-                                    x=[f"Dim {i+1}" for i in range(n_comps_max)], 
-                                    y=cum_var, 
-                                    name='Variance Cumulée (%)',
-                                    mode='lines+markers',
-                                    line=dict(color='#e74c3c')
-                                ))
-                                
-                                fig_scree.update_layout(title="Poids des Dimensions (Scree Plot)", yaxis_title="% d'information expliquée")
-                                st.plotly_chart(fig_scree, use_container_width=True)
-                                
-                                st.caption(f"💡 Lecture : La 1ère dimension explique à elle seule **{exp_var[0]:.1f}%** des différences de niveau entre les participants.")
-                                
-                            except Exception as e:
-                                st.error(f"Erreur lors du calcul de l'ACP : {e}")
-                                
-                            except Exception as e:
-                                st.error(f"Erreur lors du calcul de l'ACP : {e}")
-                        else:
-                            st.warning("⚠️ La librairie 'scikit-learn' est requise pour l'ACP.")
+                            clean_name = str(c).replace("score_", "").strip()
+                            if len(clean_name) > 80: clean_name = clean_name[:80] + "..."
                             
+                            label = f"📄 {clean_name}"
+                            all_items_map[label] = c
+                            all_labels_list.append(label)
+
+                    # B. Case à cocher magique (Tout sélectionner)
+                    tout_cocher = st.checkbox("✅ Tout cocher (Sélectionner toutes les questions du questionnaire)", value=False)
+
+                    # C. Définition de la sélection par défaut
+                    if tout_cocher:
+                        default_selection = all_labels_list
                     else:
-                        st.info("👈 Veuillez sélectionner au moins 3 questions dans la liste ci-dessus.")
+                        default_selection = []
 
+                    # D. La Liste Multiselect (Simple)
+                    selection_user = st.multiselect(
+                        "Liste des questions à analyser :", 
+                        options=all_labels_list, 
+                        default=default_selection,
+                        help="Cochez la case ci-dessus pour tout ajouter d'un coup."
+                    )
+
+                    # ----------------------------------------------------
+                    # 3. CALCULS (Code Mathématique)
+                    # ----------------------------------------------------
+                    if len(selection_user) > 2:
+                        # Récupération des colonnes réelles
+                        real_cols = [all_items_map[x] for x in selection_user if x in all_items_map]
+                        
+                        if not real_cols:
+                            st.error("Erreur de sélection.")
+                        else:
+                            # Nettoyage
+                            df_psy = df_acp[real_cols].apply(pd.to_numeric, errors='coerce').fillna(0)
+                            # Retrait variance nulle
+                            df_psy = df_psy.loc[:, df_psy.var() > 0]
+                            
+                            if df_psy.shape[1] < 2:
+                                st.warning("⚠️ Trop peu de variations dans les réponses (tout le monde a la même note) ou pas assez de colonnes.")
+                            else:
+                                # =========================================================
+                                # A. ALPHA DE CRONBACH
+                                # =========================================================
+                                st.markdown("---")
+                                st.subheader("🅰️ Fiabilité (Alpha de Cronbach)")
+                                
+                                k = df_psy.shape[1]
+                                var_item = df_psy.var(ddof=1).sum()
+                                var_tot = df_psy.sum(axis=1).var(ddof=1)
+                                
+                                if var_tot > 0:
+                                    alpha = (k / (k - 1)) * (1 - (var_item / var_tot))
+                                else:
+                                    alpha = 0
+                                
+                                c1, c2 = st.columns([1, 3])
+                                c1.metric("Score Alpha", f"{alpha:.3f}")
+                                
+                                with c2:
+                                    if alpha > 0.9: st.success("🌟 **Excellent.** Cohérence très forte.")
+                                    elif alpha > 0.7: st.success("✅ **Bon.** Le questionnaire est fiable.")
+                                    elif alpha > 0.6: st.warning("⚠️ **Acceptable.** Mais un peu fragile.")
+                                    else: st.error("❌ **Faible.** Les questions mesurent des choses trop différentes.")
+
+                                # =========================================================
+                                # B. ACP (STRUCTURE)
+                                # =========================================================
+                                st.markdown("---")
+                                st.subheader("🅱️ Structure (ACP)")
+                                
+                                if SKLEARN_AVAILABLE:
+                                    try:
+                                        # 1. Préparation et Calcul ACP
+                                        scaler = StandardScaler()
+                                        X_scaled = scaler.fit_transform(df_psy)
+                                        
+                                        # Max 10 dimensions ou moins selon la taille des données
+                                        n_comps = min(df_psy.shape[0], df_psy.shape[1], 10)
+                                        
+                                        pca = PCA(n_components=n_comps)
+                                        pca.fit(X_scaled)
+                                        
+                                        exp_var = pca.explained_variance_ratio_ * 100
+                                        cum_var = np.cumsum(exp_var)
+                                        
+                                        # 2. Graphique Eboulis (Scree Plot)
+                                        fig_scree = go.Figure()
+                                        fig_scree.add_trace(go.Bar(x=[f"Dim {i+1}" for i in range(n_comps)], y=exp_var, name='Var. Expliquée', marker_color='#3498db'))
+                                        fig_scree.add_trace(go.Scatter(x=[f"Dim {i+1}" for i in range(n_comps)], y=cum_var, name='Cumul', mode='lines+markers', line=dict(color='#e74c3c')))
+                                        
+                                        fig_scree.update_layout(title="Eboulis des valeurs propres", height=350, yaxis_title="% d'Explication")
+                                        st.plotly_chart(fig_scree, use_container_width=True)
+                                        st.caption(f"La Dimension 1 explique à elle seule **{exp_var[0]:.1f}%** de la variance totale.")
+                                        
+                                        # 3. ANALYSE DU CONTENU (Saturations Interactives)
+                                        st.divider()
+                                        st.subheader("🕵️‍♀️ Analyse détaillée Dimension par Dimension")
+                                        st.info("Sélectionnez une dimension ci-dessous pour voir sa composition.")
+
+                                        # Création du tableau des "Poids" (Loadings)
+                                        loadings = pca.components_.T 
+                                        dim_names = [f"Dim {i+1}" for i in range(n_comps)]
+                                        df_loadings = pd.DataFrame(loadings, index=df_psy.columns, columns=dim_names)
+                                        
+                                        # --- SÉLECTEUR DE DIMENSION ---
+                                        col_sel, col_blank = st.columns([1, 2])
+                                        chosen_dim = col_sel.selectbox("🔎 Quelle Dimension analyser ?", dim_names, index=0)
+                                        
+                                        # --- FILTRAGE ET VISUALISATION INTELLIGENTE ---
+                                        data_dim = df_loadings[chosen_dim].copy()
+                                        
+                                        # a. On tente le filtre standard (Questions importantes > 0.3)
+                                        threshold = 0.3
+                                        subset = data_dim[data_dim.abs() >= threshold].sort_values()
+                                        
+                                        note_lecture = ""
+                                        
+                                        # b. Si rien n'est trouvé (Dimension faible), on prend le Top 10 par défaut
+                                        if subset.empty:
+                                            note_lecture = "⚠️ **Note :** Cette dimension est diffuse (tous les poids sont < 0.3). Voici les 10 questions qui l'influencent le plus, même faiblement."
+                                            # On prend les 10 plus gros poids en valeur absolue
+                                            top_10_idx = data_dim.abs().sort_values(ascending=False).head(10).index
+                                            subset = data_dim.loc[top_10_idx].sort_values()
+                                        else:
+                                            note_lecture = "✅ **Lecture :** Les questions affichées ont un lien significatif avec cette dimension."
+
+                                        # Affichage
+                                        if not subset.empty:
+                                            if note_lecture: st.caption(note_lecture)
+                                            
+                                            fig_load = px.bar(
+                                                subset, 
+                                                orientation='h',
+                                                title=f"Ingrédients de la {chosen_dim}",
+                                                labels={"value": "Poids (Corrélation)", "index": "Question"},
+                                                color=subset.values,
+                                                color_continuous_scale="RdBu_r", # Rouge = Positif, Bleu = Négatif
+                                                range_color=[-1, 1]
+                                            )
+                                            fig_load.update_layout(showlegend=False, coloraxis_showscale=False, height=max(400, len(subset)*30))
+                                            st.plotly_chart(fig_load, use_container_width=True)
+                                            
+                                            st.write(f"**Légende :** Rouge = Poids Positif (Définit la dimension) | Bleu = Poids Négatif (S'oppose).")
+                                        else:
+                                            st.warning("Aucune donnée à afficher.")
+
+                                    except Exception as e:
+                                        st.error(f"Erreur lors du calcul de l'ACP : {e}")
+                                else:
+                                    st.warning("La librairie 'scikit-learn' n'est pas installée. Impossible de faire l'ACP.")
+                    else:
+                        st.info("👈 Sélectionnez au moins 3 questions pour lancer l'analyse.")
                             # =========================================================================
                 
                 # =========================================================================
@@ -3011,253 +3449,514 @@ if df_raw is not None:
                     ])
                     
                     # --- 1. REGRESSION LINEAIRE (OLS) ---
+                    # --- 1. REGRESSION LINEAIRE (OLS) ---
                     with subtab_reg:
-                        st.subheader("Régression Multiple (OLS)")
-                        st.caption("Expliquer une note numérique par plusieurs facteurs.")
+                        st.subheader("🧪 Scénario 1 : \"Le Profil\" (L'analyse socioprofessionnelle)")
                         
-                        if total_cols:
-                            y_col = st.selectbox("Cible à expliquer (Y) :", total_cols, key="ols_y")
-                            
-                            # Création liste X (Facteurs potentiels)
-                            x_cols = [c for c in df_model.columns if any(k in c.lower() for k in ["statut", "ancien", "score_", "zone"]) and c != y_col][:50]
-                            sel_x = st.multiselect("Facteurs explicatifs (X) :", x_cols, default=x_cols[:2], key="ols_x")
-                            
-                            if st.button("🚀 Calculer le Modèle (OLS)"):
-                                if sel_x:
-                                    try:
-                                        # Préparation (One-Hot Encoding pour les variables texte)
-                                        df_r = df_model[[y_col] + sel_x].dropna()
-                                        X = sm.add_constant(pd.get_dummies(df_r[sel_x], drop_first=True).astype(float))
-                                        model = sm.OLS(df_r[y_col], X).fit()
-                                        
-                                        # Résultat R²
-                                        st.success(f"**Puissance du modèle (R²) : {model.rsquared:.1%}**")
-                                        st.info(f"Les facteurs choisis expliquent **{model.rsquared:.1%}** de la variation de la note.")
+                        # --- PROBLÉMATIQUE ET INTERPRÉTATION ---
+                        st.info("""
+                        ### ❓ La Problématique
+                        **"Le statut (étudiant, titulaire, contractuel) détermine-t-il réellement la compétence ?"**
+                        
+                        On cherche à savoir si le fait d'appartenir à une catégorie spécifique donne un **avantage** ou un **désavantage** significatif sur la note finale, toutes choses égales par ailleurs.
+                        """)
 
-                                        # --- AJOUT : FENÊTRE D'AIDE CLIQUABLE ---
-                                        with st.expander("📘 Aide à la lecture : Comment comprendre ces graphiques ?", expanded=False):
-                                            st.markdown("""
-                                            Voici comment interpréter les résultats ci-dessous :
-                                            
-                                            **1. Le Score (R²) juste au-dessus :**
-                                            * C'est la note de votre modèle. S'il est à **10%**, vos facteurs expliquent peu de choses. S'il est à **50%** ou plus, c'est que vous avez trouvé des causes importantes !
-                                            
-                                            **2. L'Impact des Facteurs (1er graphique - Barres) :**
-                                            * **Barre à Droite (>0) :** Ce facteur fait **monter** la note (Relation positive).
-                                            * **Barre à Gauche (<0) :** Ce facteur fait **baisser** la note (Relation négative).
-                                            * **La Couleur :** Regardez surtout les barres **VERTES**. Ce sont les seules qui sont statistiquement fiables. Les grises peuvent être dues au hasard.
-                                            
-                                            **3. Les Erreurs (2ème graphique - Résidus) :**
-                                            * On vérifie si le modèle se trompe de façon aléatoire. Idéalement, les points ne doivent former aucun dessin particulier.
-                                            
-                                            **4. Réalité vs Prédiction (3ème graphique - Nuage) :**
-                                            * **Ligne Rouge :** C'est la prédiction parfaite.
-                                            * **Les Points :** Ce sont vos participants. Plus les points sont collés à la ligne rouge, plus le modèle a "deviné" juste leur note réelle.
-                                            """)
-                                        # ----------------------------------------
-                                        
-                                        # Graphique Coefficients
-                                        res = pd.DataFrame({"Facteur": model.params.index, "Coef": model.params.values, "P": model.pvalues.values})
-                                        res = res[res.Facteur != "const"]
-                                        
-                                        # Code couleur (Vert = Significatif, Gris = Hasard)
-                                        res['Significatif'] = res['P'] < 0.05
-                                        
-                                        fig_coef = px.bar(res, x="Coef", y="Facteur", color="Significatif", orientation='h', title="Impact des facteurs (Coefficients)")
-                                        fig_coef.add_vline(x=0, line_width=2, line_color="black")
-                                        st.plotly_chart(fig_coef, use_container_width=True)
-                                        
-                                        # Diagnostic des Résidus
-                                        st.markdown("#### 🩺 Diagnostic (Qualité du modèle)")
-                                        fig_resid = px.scatter(x=model.fittedvalues, y=model.resid, title="Analyse des Résidus (Erreurs)")
-                                        fig_resid.add_hline(y=0, line_dash="dash", line_color="red")
-                                        fig_resid.update_layout(xaxis_title="Note Prédite", yaxis_title="Erreur (Réel - Prédit)")
-                                        st.plotly_chart(fig_resid, use_container_width=True)
+                        st.markdown("""
+                        ### 💡 La Réponse par le Résultat (Comment lire le graphique ?)
+                        Ce modèle mathématique isole l'impact de chaque statut :
+                        
+                        * **Si la barre est à Droite (Positive) 🟩 :** Ce statut est un **atout**. Les enseignants de ce groupe ont tendance à avoir de **meilleurs résultats** que la moyenne de base.
+                        * **Si la barre est à Gauche (Négative) 🟥 :** Ce statut est un **frein**. Les enseignants de ce groupe ont tendance à avoir des résultats **inférieurs**.
+                        * **La longueur de la barre :** Indique l'intensité de l'écart (en nombre de points).
+                        * **La couleur (Vert vs Gris) :** Si c'est vert (✅ Prouvé), la différence est scientifiquement sûre. Si c'est gris, c'est peut-être dû au hasard.
+                        """)
+                        
+                        st.divider()
+                        
+                        # --- A. CONFIGURATION DES CIBLES (Y) ---
+                        targets_map = {
+                            "🏆 Score Global (Total /100)": "Total_par_repondeur",
+                            "🧠 Partie 2 : Fonctionnement & Dév. (/32)": "total_partie_2",
+                            "🛠️ Partie 3 : Pratiques & Interventions (/28)": "total_partie_3",
+                            "💻 Partie 4 : Outils Numériques (/24)": "total_partie_4",
+                            "📝 Partie 5 : Évaluation (/16)": "total_partie_5" 
+                        }
 
-                                        # --- AJOUT DU NUAGE DE POINTS (RÉEL vs PRÉDIT) ---
-                                        st.markdown("#### 🎯 Nuage de points : Réalité vs Prédiction")
-                                        # On crée un DF temporaire pour le graphique
-                                        df_cloud = pd.DataFrame({'Réel': df_r[y_col], 'Prédit': model.fittedvalues})
-                                        
-                                        fig_cloud = px.scatter(df_cloud, x='Réel', y='Prédit', 
-                                                               title="Comparaison : Valeurs Réelles vs Prédites",
-                                                               opacity=0.6,
-                                                               labels={'Réel': 'Note Réelle (Observée)', 'Prédit': 'Note Prédite par le modèle'})
-                                        
-                                        # Ajout d'une ligne diagonale rouge (Idéal si tous les points sont dessus)
-                                        min_val = min(df_cloud['Réel'].min(), df_cloud['Prédit'].min())
-                                        max_val = max(df_cloud['Réel'].max(), df_cloud['Prédit'].max())
-                                        fig_cloud.add_shape(type="line", x0=min_val, y0=min_val, x1=max_val, y1=max_val,
-                                                            line=dict(color="red", dash="dash"))
-                                        
-                                        st.plotly_chart(fig_cloud, use_container_width=True)
-                                        # -------------------------------------------------
-                                        
-                                    except Exception as e:
-                                        st.error(f"Erreur de calcul : {e}")
+                        available_targets = {}
+                        for label, col_name in targets_map.items():
+                            found_col = next((c for c in df_model.columns if c.replace(" ", "") == col_name.replace(" ", "")), None)
+                            if found_col:
+                                available_targets[label] = found_col
+                        
+                        if available_targets:
+                            c_reg1, c_reg2 = st.columns([1, 2])
+                            
+                            # 1. Sélection Y
+                            with c_reg1:
+                                selected_label_y = st.selectbox("🎯 Cible à expliquer (Y) :", options=list(available_targets.keys()), index=0)
+                                y_col = available_targets[selected_label_y]
+
+                            # 2. Sélection X (MODIFIÉE AVEC FI AJOUTÉ)
+                            with c_reg2:
+                                # --- CRÉATION DYNAMIQUE DES COLONNES POUR LA RÉGRESSION ---
+                                
+                                # Définition précise de vos groupes (FI AJOUTÉ ICI)
+                                custom_groups_def = {
+                                    "🟦(FI) FORMATION INITIALE (Fusion)": LISTE_FI,
+                                    "🟦(FC) FORMATION CONTINUE (Fusion)": LISTE_FC,
+                                    "🟩 Autre": ["Autre", "Autres"],
+                                    "🟩 Enseignant Contractuel": ["Enseignant Contractuel,"],
+                                    "🟩 Enseignant Remplaçant": ["Enseignant Remplaçant,"],
+                                    "🟩 Enseignant Titulaire (fonctionnaire)": ["Enseignant Titulaire (fonctionnaire),"],
+                                    "🟩 Fonctionnaire stagiaire mi-temps (PEES mi-temps), 1er degré": ["Fonctionnaire stagiaire mi-temps (PEES mi-temps), 1er degré"],
+                                    "🟩 Fonctionnaire stagiaire temps-complet (PEES temps complet) 1er degré": ["Fonctionnaire stagiaire temps-complet (PEES temps complet) 1er degré,"],
+                                    "🟩 Étudiant ou étudiante au sein du master MEEF1 mention 1er degré, en M1": ["Étudiant ou étudiante au sein du master MEEF1 mention 1er degré, en M1"],
+                                    "🟩 Étudiant ou étudiante au sein du master MEEF1 mention 1er degré, en M2": ["Étudiant ou étudiante au sein du master MEEF1 mention 1er degré, en M2"]
+                                }
+
+                                generated_cols = []
+                                
+                                # Génération des colonnes binaires dans le DataFrame utilisé pour le modèle
+                                for label_group, raw_values in custom_groups_def.items():
+                                    # Gestion spécifique des Fusions (FI et FC) pour inclure la colonne "Autre" si besoin
+                                    if label_group == "🟦(FC) FORMATION CONTINUE (Fusion)":
+                                        mask = df_model[col_statut].isin(LISTE_FC)
+                                        if col_statut_autre:
+                                            mask = mask | df_model[col_statut_autre].astype(str).str.contains("FC", case=False, na=False)
+                                    
+                                    elif label_group == "🟦(FI) FORMATION INITIALE (Fusion)":
+                                        mask = df_model[col_statut].isin(LISTE_FI)
+                                        if col_statut_autre:
+                                            mask = mask | df_model[col_statut_autre].astype(str).str.contains("FI", case=False, na=False)
+                                    
+                                    else:
+                                        # Pour les autres, correspondance exacte ou inclusion liste standard
+                                        mask = df_model[col_statut].isin(raw_values)
+                                    
+                                    # Création de la colonne (0 ou 1)
+                                    df_model[label_group] = mask.astype(int)
+                                    generated_cols.append(label_group)
+
+                                # On force la structure "groups" pour n'avoir QUE les statuts
+                                groups = {
+                                    "🎓 Statuts": generated_cols
+                                }
+
+                                # NIVEAU 1 : Sélection de la famille (Unique ici)
+                                selected_families = st.multiselect(
+                                    "🧪 Facteurs (X) - Cochez les grandes familles :", 
+                                    options=list(groups.keys()),
+                                    default=["🎓 Statuts"]
+                                )
+
+                                # NIVEAU 2 : Sélection des options
+                                final_sel_x = []
+                                
+                                if selected_families:
+                                    st.markdown("👇 **Affinez votre sélection (Cochez/Décochez les options) :**")
+                                    
+                                    for family in selected_families:
+                                        cols = groups[family]
+                                        chosen_cols = st.multiselect(
+                                            f"Options pour {family} :",
+                                            options=cols,
+                                            default=cols, # Tout coché par défaut
+                                            key=f"multi_{family}_custom"
+                                        )
+                                        final_sel_x.extend(chosen_cols)
+
+                            st.markdown("---")
+
+                            # --- B. CALCUL DU MODÈLE ---
+                            if st.button("🚀 Lancer l'analyse du Scénario 1"):
+                                if not final_sel_x:
+                                    st.error("⚠️ Veuillez sélectionner au moins un statut.")
                                 else:
-                                    st.warning("Veuillez sélectionner au moins un facteur X.")
-
-                    # --- 2. REGRESSION LOGISTIQUE (LOGIT) ---
-                    with subtab_logit:
-                        st.subheader("Régression Logistique (Probabilités)")
-                        st.caption("Prédire la chance d'appartenir au groupe 'Haut Niveau'.")
-                        
-
-                        if total_cols:
-                            # 1. Définition du succès
-                            target_bin = st.selectbox("Sur quelle note définir le succès ?", total_cols, key="logit_y")
-                            median_val = df_model[target_bin].median()
-                            st.write(f"👉 On considère comme **'Succès'** toute note supérieure à la médiane : **{median_val:.2f}**")
-                            
-                            # 2. Facteurs
-                            sel_x_log = st.multiselect("Facteurs prédictifs :", x_cols, default=x_cols[:2], key="logit_x")
-                            
-                            if st.button("🔮 Calculer les Odds Ratios"):
-                                try:
-                                    df_l = df_model[[target_bin] + sel_x_log].dropna()
-                                    # Binarisation : 1 si > médiane, 0 sinon
-                                    df_l['Target_Bin'] = (df_l[target_bin] > median_val).astype(int)
-                                    
-                                    X = sm.add_constant(pd.get_dummies(df_l[sel_x_log], drop_first=True).astype(float))
-                                    logit_model = sm.Logit(df_l['Target_Bin'], X).fit(disp=0)
-                                    
-                                    # Odds Ratios
-                                    odds = np.exp(logit_model.params)
-                                    pvals = logit_model.pvalues
-                                    res_log = pd.DataFrame({"Facteur": odds.index, "Odds Ratio": odds.values, "P-value": pvals.values})
-                                    res_log = res_log[res_log.Facteur != "const"]
-                                    
-                                    st.success("Modèle calculé avec succès !")
-
-                                    # --- AJOUT : FENÊTRE D'AIDE CLIQUABLE ---
-                                    with st.expander("📘 Aide à la lecture : Comprendre les Chances et la Précision", expanded=False):
-                                        st.markdown("""
-                                        Ce modèle ne prédit pas une note exacte, mais **la probabilité de réussir** (d'être au-dessus de la médiane).
-                                        
-                                        **1. Le graphique des barres (Odds Ratios) :**
-                                        * C'est un multiplicateur de chance.
-                                        * **Barre > 1 (Droite) :** C'est un **Bonus**. Ce facteur augmente la probabilité de succès (ex: 1.5 = +50% de chance).
-                                        * **Barre < 1 (Gauche) :** C'est un **Malus**. Ce facteur diminue la probabilité de succès.
-                                        * **Ligne pointillée (1) :** Zone neutre (aucun effet).
-                                        
-                                        **2. La Courbe ROC (Zone Bleue) :**
-                                        * Elle mesure la capacité du modèle à ne pas se tromper.
-                                        * Plus la zone bleue est **bombée vers le coin haut-gauche**, meilleur est le modèle.
-                                        * **Score AUC :**
-                                            * **0.50 :** Pile ou face (le modèle devine au hasard).
-                                            * **0.70 :** Modèle correct.
-                                            * **0.90 :** Excellent modèle.
-                                        """)
-                                    # ----------------------------------------
-                                    
-                                    # Graphique Odds Ratios
-                                    st.markdown("### 📊 Les Facteurs de Chance (Odds Ratios)")
-                                    fig_or = px.bar(res_log, x="Odds Ratio", y="Facteur", color="P-value", title="Impact sur la probabilité de succès")
-                                    fig_or.add_vline(x=1, line_dash="dash", line_color="black", annotation_text="Neutre")
-                                    st.plotly_chart(fig_or, use_container_width=True)
-                                    st.caption("💡 **Lecture :** Si la barre dépasse 1, ce facteur **favorise** la réussite. Si elle est en dessous de 1, il la pénalise.")
-                                    
-                                    # Courbe ROC
-                                    st.markdown("---")
-                                    st.subheader("🎯 Précision (Courbe ROC)")
-                                    y_prob = logit_model.predict(X)
-                                    fpr, tpr, _ = roc_curve(df_l['Target_Bin'], y_prob)
-                                    roc_auc = auc(fpr, tpr)
-                                    
-                                    col_auc1, col_auc2 = st.columns([3, 1])
-                                    with col_auc1:
-                                        fig_roc = px.area(x=fpr, y=tpr, title=f'Courbe ROC (AUC = {roc_auc:.2f})', labels={'x':'Faux Positifs', 'y':'Vrais Positifs'})
-                                        fig_roc.add_shape(type='line', line=dict(dash='dash'), x0=0, x1=1, y0=0, y1=1)
-                                        st.plotly_chart(fig_roc, use_container_width=True)
-                                    with col_auc2:
-                                        st.metric("Score AUC", f"{roc_auc:.2f}")
-                                        if roc_auc > 0.7: st.success("✅ Bon Modèle")
-                                        else: st.warning("⚠️ Modèle Faible")
-                                    
-                                except Exception as e:
-                                    st.error(f"Le modèle n'a pas convergé (Données insuffisantes ou trop séparées). Erreur : {e}")
-
-                    # --- 3. RANDOM FOREST (IA) ---
-                    with subtab_rf: 
-                        st.subheader("Importance des Variables (Random Forest)")
-                        st.caption("Intelligence Artificielle pour détecter les facteurs clés (linéaires ou non).")
-                        
-                        if total_cols:
-                            rf_target = st.selectbox("Cible à expliquer :", total_cols, key="rf_y")
-                            
-                            # --- AJOUT FILTRES (Parties vs Questions) ---
-                            st.write("###### ⚙️ Choisir les variables à tester")
-                            filter_mode = st.radio(
-                                "Niveau de détail :", 
-                                ["Tout inclure (Automatique)", "Scores & Totaux (Parties)", "Questions détaillées (Items)"],
-                                horizontal=True
-                            )
-                            
-                            # 1. On récupère toutes les numériques possibles
-                            all_candidates = [c for c in df.columns if df[c].dtype in ['float64', 'int64'] and c != rf_target and "ID" not in c]
-                            
-                            # 2. On applique le filtre
-                            if "Scores" in filter_mode:
-                                # Garde ce qui contient "score", "total", "moyenne", "dim"
-                                default_feats = [c for c in all_candidates if any(x in c.lower() for x in ['score', 'total', 'moyenne', 'dim', 'partie'])]
-                            elif "Questions" in filter_mode:
-                                # Garde ce qui contient "Q", "Item" et qui n'est pas un total
-                                default_feats = [c for c in all_candidates if any(x in c.lower() for x in ['q', 'item']) and "total" not in c.lower()]
-                            else:
-                                default_feats = all_candidates
-
-                            # 3. Multiselect pour ajustement final
-                            rf_features = st.multiselect("Confirmez les variables (X) :", all_candidates, default=default_feats)
-                            # --------------------------------------------
-                            
-                            if st.button("🌲 Lancer l'IA (Random Forest)"):
-                                if rf_features:
                                     try:
-                                        from sklearn.ensemble import RandomForestRegressor
+                                        df_clean = df_model.copy()
+                                        df_clean[y_col] = pd.to_numeric(df_clean[y_col], errors='coerce')
                                         
-                                        # Utilisation de df_model si disponible, sinon df (sécurité)
-                                        data_src = df_model if 'df_model' in locals() else df
-                                        df_rf = data_src[[rf_target] + rf_features].dropna()
+                                        # On ne garde que la cible et les colonnes générées (qui sont déjà numériques 0/1)
+                                        df_r = df_clean[[y_col] + final_sel_x].dropna()
                                         
+                                        if df_r.empty:
+                                            st.error("Données vides. Vérifiez les colonnes.")
+                                        else:
+                                            # Pas besoin de get_dummies car nos colonnes sont déjà binaires (0/1)
+                                            # On ajoute juste la constante (l'intercept)
+                                            X = df_r[final_sel_x].astype(float)
+                                            X = sm.add_constant(X)
+                                            Y = df_r[y_col]
+
+                                            model = sm.OLS(Y, X).fit()
+                                            r2 = model.rsquared
+                                            
+                                            st.success(f"**Analyse terminée !** Ces statuts expliquent **{r2:.1%}** de la variance de la note.")
+                                            
+                                            # Graphique
+                                            st.subheader("⚖️ Impact visuel (Qui est avantagé ?)")
+                                            res_df = pd.DataFrame({
+                                                "Facteur": model.params.index,
+                                                "Impact (Points)": model.params.values,
+                                                "P-value": model.pvalues.values
+                                            })
+                                            res_df = res_df[res_df.Facteur != "const"]
+                                            res_df['Fiabilité'] = res_df['P-value'].apply(lambda p: "✅ Prouvé (Significatif)" if p < 0.05 else "⚪ Incertain (Non-Significatif)")
+                                            res_df = res_df.sort_values("Impact (Points)", ascending=True)
+                                            
+                                            fig_coef = px.bar(
+                                                res_df, x="Impact (Points)", y="Facteur", color="Fiabilité", orientation='h',
+                                                title=f"Impact sur : {selected_label_y}",
+                                                color_discrete_map={"✅ Prouvé (Significatif)": "#2ecc71", "⚪ Incertain (Non-Significatif)": "#95a5a6"},
+                                                text_auto='.2f'
+                                            )
+                                            fig_coef.add_vline(x=0, line_width=2, line_color="black")
+                                            fig_coef.update_yaxes(title="")
+                                            st.plotly_chart(fig_coef, use_container_width=True)
+                                            
+                                    except Exception as e:
+                                        st.error(f"Erreur : {e}")
+                        else:
+                            st.warning("Colonnes scores introuvables.")
+                    # --- 2. REGRESSION LOGISTIQUE (LOGIT) ---
+                    # --- 2. REGRESSION LOGISTIQUE (LOGIT) ---
+                # --- 2. REGRESSION LOGISTIQUE (LOGIT) ---
+                with subtab_logit:
+                    st.subheader("🔮 Régression Logistique (Probabilités)")
+                    
+                    st.info("""
+                    ### 🎯 Objectif : Prédire la "Réussite"
+                    Ce modèle ne cherche pas à deviner la note exacte, mais la **chance** d'être dans le groupe de tête (au-dessus de la moyenne).
+                    
+                    * **Odds Ratio > 1 (Barre à droite) 🟩 :** C'est un **Atout**. Ce facteur multiplie vos chances de réussite.
+                    * **Odds Ratio < 1 (Barre à gauche) 🟥 :** C'est un **Frein**. Ce facteur diminue vos chances.
+                    """)
+                    
+                    st.divider()
+
+                    # --- A. CONFIGURATION DES CIBLES (Y) ---
+                    targets_map_logit = {
+                        "🏆 Score Global (Total /100)": "Total_par_repondeur",
+                        "🧠 Partie 2 : Fonctionnement & Dév. (/32)": "total_partie_2",
+                        "🛠️ Partie 3 : Pratiques & Interventions (/28)": "total_partie_3",
+                        "💻 Partie 4 : Outils Numériques (/24)": "total_partie_4",
+                        "📝 Partie 5 : Évaluation (/16)": "total_partie_5" 
+                    }
+
+                    available_targets_log = {}
+                    for label, col_name in targets_map_logit.items():
+                        found_col = next((c for c in df_model.columns if c.replace(" ", "") == col_name.replace(" ", "")), None)
+                        if found_col:
+                            available_targets_log[label] = found_col
+
+                    if available_targets_log:
+                        c_log1, c_log2 = st.columns([1, 2])
+                        
+                        # 1. Sélection Y
+                        with c_log1:
+                            selected_label_y_log = st.selectbox("1. Sur quelle note définir le succès ?", options=list(available_targets_log.keys()), index=0, key="logit_y_select")
+                            target_bin = available_targets_log[selected_label_y_log]
+                            
+                            median_val = df_model[target_bin].median()
+                            st.caption(f"ℹ️ Le seuil de réussite est fixé à **{median_val:.0f} points** (Médiane).")
+
+                        # 2. Sélection X (FACTEURS PRÉDICTIFS)
+                        with c_log2:
+                            st.write("2. Facteurs prédictifs")
+                            
+                            groups_logit = {}
+                            
+                            # A. STATUTS (Liste personnalisée)
+                            custom_status_logit = {
+                                "🟦(FI) FORMATION INITIALE (Fusion)": LISTE_FI,
+                                "🟦(FC) FORMATION CONTINUE (Fusion)": LISTE_FC,
+                                "🟩 Autre": ["Autre", "Autres"],
+                                "🟩 Enseignant Contractuel": ["Enseignant Contractuel,"],
+                                "🟩 Enseignant Remplaçant": ["Enseignant Remplaçant,"],
+                                "🟩 Enseignant Titulaire (fonctionnaire)": ["Enseignant Titulaire (fonctionnaire),"],
+                                "🟩 Fonctionnaire stagiaire mi-temps": ["Fonctionnaire stagiaire mi-temps (PEES mi-temps), 1er degré"],
+                                "🟩 Fonctionnaire stagiaire temps-complet": ["Fonctionnaire stagiaire temps-complet (PEES temps complet) 1er degré,"],
+                                "🟩 Étudiant MEEF1 M1": ["Étudiant ou étudiante au sein du master MEEF1 mention 1er degré, en M1"],
+                                "🟩 Étudiant MEEF1 M2": ["Étudiant ou étudiante au sein du master MEEF1 mention 1er degré, en M2"]
+                            }
+                            
+                            list_status_cols = []
+                            for label_s, val_s in custom_status_logit.items():
+                                col_name_clean = f"Statut: {label_s.replace('🟩 ', '').replace('🟦', '')}"
+                                if "Fusion" in label_s and "FC" in label_s:
+                                    mask = df_model[col_statut].isin(LISTE_FC)
+                                    if col_statut_autre: mask = mask | df_model[col_statut_autre].astype(str).str.contains("FC", case=False, na=False)
+                                elif "Fusion" in label_s and "FI" in label_s:
+                                    mask = df_model[col_statut].isin(LISTE_FI)
+                                    if col_statut_autre: mask = mask | df_model[col_statut_autre].astype(str).str.contains("FI", case=False, na=False)
+                                else:
+                                    mask = df_model[col_statut].isin(val_s)
+                                
+                                df_model[col_name_clean] = mask.astype(int)
+                                list_status_cols.append(col_name_clean)
+                            
+                            groups_logit["🎓 Statuts"] = list_status_cols
+
+                            # B. ACADÉMIES
+                            if col_academie:
+                                list_acad_cols = []
+                                top_acads = df_model[col_academie].value_counts()
+                                top_acads = top_acads[top_acads >= 5].index.tolist()
+                                for acad in top_acads:
+                                    col_name_acad = f"🏛️ Académie: {acad}"
+                                    df_model[col_name_acad] = (df_model[col_academie] == acad).astype(int)
+                                    list_acad_cols.append(col_name_acad)
+                                groups_logit["🏛️ Académies"] = list_acad_cols
+
+                            # C. ZONE GÉOGRAPHIQUE
+                            cols_zones_found = [c for c in df_model.columns if "zone géographique" in str(c).lower() and "[" in str(c)]
+                            if cols_zones_found:
+                                list_zone_cols = []
+                                for z_col in cols_zones_found:
+                                    match = re.search(r'\[(.*?)\]', z_col)
+                                    clean_z = match.group(1).replace(',', '').strip() if match else z_col
+                                    col_name_zone = f"🌍 Zone: {clean_z}"
+                                    df_model[col_name_zone] = df_model[z_col].apply(lambda x: 1 if str(x).strip().lower() in ['oui', 'true', '1', 'checked'] else 0)
+                                    list_zone_cols.append(col_name_zone)
+                                groups_logit["🌍 Zones Géographiques"] = list_zone_cols
+
+                            selected_families_log = st.multiselect("Cochez les familles de facteurs :", options=list(groups_logit.keys()), default=["🎓 Statuts"])
+
+                            final_sel_x_log = []
+                            if selected_families_log:
+                                st.markdown("👇 **Cochez les options spécifiques :**")
+                                for fam in selected_families_log:
+                                    cols = groups_logit[fam]
+                                    chosen = st.multiselect(f"Dans {fam} :", options=cols, default=cols, key=f"log_multi_{fam}")
+                                    final_sel_x_log.extend(chosen)
+
+                        st.markdown("---")
+
+                        # --- C. CALCUL DU MODÈLE ---
+                        if st.button("🔮 Calculer les Chances (Odds Ratios)"):
+                            if not final_sel_x_log:
+                                st.error("⚠️ Veuillez sélectionner au moins un facteur.")
+                            else:
+                                try:
+                                    df_l = df_model[[target_bin] + final_sel_x_log].dropna()
+                                    if not df_l.empty:
+                                        med_local = df_l[target_bin].median()
+                                        if med_local == df_l[target_bin].min(): med_local += 0.1
+                                        if med_local == df_l[target_bin].max(): med_local -= 0.1
+                                        
+                                        df_l['Target_Bin'] = (df_l[target_bin] > med_local).astype(int)
+                                        
+                                        if df_l['Target_Bin'].nunique() >= 2:
+                                            X = df_l[final_sel_x_log].astype(float)
+                                            X = sm.add_constant(X)
+                                            Y = df_l['Target_Bin']
+                                            logit_model = sm.Logit(Y, X).fit(disp=0)
+                                            
+                                            odds = np.exp(logit_model.params)
+                                            pvals = logit_model.pvalues
+                                            res_log = pd.DataFrame({"Facteur": odds.index, "Odds Ratio": odds.values, "P-value": pvals.values})
+                                            res_log = res_log[res_log.Facteur != "const"]
+                                            res_log['Significatif'] = res_log['P-value'].apply(lambda p: "✅ Significatif" if p < 0.05 else "⚪ Non-Significatif")
+                                            res_log = res_log.sort_values("Odds Ratio", ascending=False)
+
+                                            st.success("Analyse terminée !")
+                                            
+                                            # --- GRAPHIQUE 1 : ODDS RATIOS ---
+                                            st.subheader("📊 Les Facteurs de Succès (Odds Ratios)")
+                                            def clean_label_display(val):
+                                                val = str(val).replace("Statut:", "").strip().replace("Académie:", "").strip().replace("Zone:", "").strip()
+                                                val = val.replace("(Fusion)", "").strip().replace("(fonctionnaire)", "").strip()
+                                                if "MEEF1" in val: return val.replace("Étudiant ou étudiante au sein du master", "Master")
+                                                if "PEES" in val: return "Stagiaire (PEES)"
+                                                return val.capitalize()
+
+                                            res_log['Nom_Propre'] = res_log['Facteur'].apply(clean_label_display)
+                                            fig_or = px.bar(res_log, x="Odds Ratio", y="Nom_Propre", color="Significatif", orientation='h',
+                                                            title=f"Facteurs influençant : {selected_label_y_log} (> {med_local:.0f})",
+                                                            color_discrete_map={"✅ Significatif": "#2ecc71", "⚪ Non-Significatif": "#95a5a6"},
+                                                            text_auto='.2f')
+                                            fig_or.add_vline(x=1, line_width=2, line_dash="dash", line_color="#e74c3c", annotation_text="Neutre (x1)")
+                                            fig_or.update_traces(textposition='outside')
+                                            st.plotly_chart(fig_or, use_container_width=True)
+
+                                            # --- GRAPHIQUE 2 : NUAGE DE POINTS (DISCRIMINATION) ---
+                                            st.markdown("---")
+                                            st.subheader("🔵 Discrimination du modèle (Nuage de points)")
+                                            df_l['Probabilité_Succès'] = logit_model.predict(X)
+                                            df_l['Résultat_Réel'] = df_l['Target_Bin'].map({1: "✅ Succès Réel", 0: "❌ Échec Réel"})
+                                            df_l = df_l.sort_values("Probabilité_Succès").reset_index(drop=True)
+                                            df_l['Individu'] = df_l.index
+
+                                            fig_scatter = px.scatter(df_l, x="Individu", y="Probabilité_Succès", color="Résultat_Réel",
+                                                                    title="Capacité du modèle à séparer les Succès des Échecs",
+                                                                    color_discrete_map={"✅ Succès Réel": "#2ecc71", "❌ Échec Réel": "#e74c3c"},
+                                                                    opacity=0.6)
+                                            
+                                            # Note: La ligne courbe sigmoïde a été retirée à votre demande
+                                            fig_scatter.add_hline(y=0.5, line_dash="dash", line_color="black", annotation_text="Seuil de décision (50%)")
+                                            st.plotly_chart(fig_scatter, use_container_width=True)
+
+                                            # --- PERFORMANCE (ROC) ET EXPLICATIONS ---
+                                            st.markdown("---")
+                                            st.subheader("🎯 Évaluation de la précision (Courbe ROC & AUC)")
+
+                                            with st.expander("📘 Comprendre la Courbe ROC et le score AUC", expanded=False):
+                                                st.markdown("""
+                                                La **courbe ROC** mesure la capacité du modèle à classer correctement les participants.
+                                                * **L'axe vertical :** Capacité à détecter les vrais succès.
+                                                * **L'axe horizontal :** Taux de fausses alertes (échecs prédits comme succès).
+                                                * **L'AUC (Surface sous la courbe) :** * **1.0 :** Parfait. 
+                                                    * **0.7-0.9 :** Performant. 
+                                                    * **0.5 :** Inutile (hasard).
+                                                """)
+
+                                            col_roc1, col_roc2 = st.columns([3, 1])
+                                            try:
+                                                fpr, tpr, _ = roc_curve(Y, df_l['Probabilité_Succès'])
+                                                roc_auc = auc(fpr, tpr)
+                                                with col_roc1:
+                                                    fig_roc = px.area(x=fpr, y=tpr, title=f'Qualité globale (AUC = {roc_auc:.2f})', labels={'x':'Faux Positifs', 'y':'Vrais Positifs'})
+                                                    fig_roc.add_shape(type='line', line=dict(dash='dash', color='black'), x0=0, x1=1, y0=0, y1=1)
+                                                    st.plotly_chart(fig_roc, use_container_width=True)
+                                                with col_roc2:
+                                                    st.metric("Précision (AUC)", f"{roc_auc:.2f}")
+                                                    if roc_auc > 0.7: st.success("✅ Modèle Performant")
+                                                    elif roc_auc > 0.6: st.warning("⚠️ Précision Moyenne")
+                                                    else: st.error("❌ Faible Séparation")
+                                            except:
+                                                st.caption("Données insuffisantes pour la courbe ROC.")
+                                        else:
+                                            st.warning("Échantillon trop homogène pour calculer.")
+                                except Exception as e:
+                                    st.error(f"Erreur : {e}")
+                    else:
+                        st.warning("Aucune colonne de score disponible.")
+                    
+                    # --- 3. RANDOM FOREST (IA) ---
+                    # --- 3. RANDOM FOREST (IA) ---
+                with subtab_rf: 
+                    st.subheader("🌲 Importance des Variables (Random Forest)")
+                    
+                    st.info("""
+                    ### 🧐 Qu'est-ce que l'importance des variables ?
+                    Contrairement à la régression, l'algorithme de Forêt Aléatoire peut détecter des relations complexes (non-linéaires). 
+                    Le graphique ci-dessous répond à la question : **"Quelles sont les informations qui pèsent le plus dans la prédiction du score ?"**
+                    
+                    * **Barre longue :** La variable est un levier majeur de performance.
+                    * **Barre courte :** La variable a peu d'influence sur le résultat.
+                    """)
+
+                    # --- A. CONFIGURATION DES CIBLES (Y) HARMONISÉES ---
+                    targets_map_rf = {
+                        "🏆 Score Global (Total /100)": "Total_par_repondeur",
+                        "🧠 Partie 2 : Fonctionnement & Dév. (/32)": "total_partie_2",
+                        "🛠️ Partie 3 : Pratiques & Interventions (/28)": "total_partie_3",
+                        "💻 Partie 4 : Outils Numériques (/24)": "total_partie_4",
+                        "📝 Partie 5 : Évaluation (/16)": "total_partie_5" 
+                    }
+
+                    available_targets_rf = {}
+                    for label, col_name in targets_map_rf.items():
+                        found_col = next((c for c in df_model.columns if c.replace(" ", "") == col_name.replace(" ", "")), None)
+                        if found_col:
+                            available_targets_rf[label] = found_col
+
+                    if available_targets_rf:
+                        # 1. Sélection de la cible (Y)
+                        selected_label_rf_y = st.selectbox("🎯 Cible à expliquer (Y) :", options=list(available_targets_rf.keys()), index=0, key="rf_y_select")
+                        rf_target = available_targets_rf[selected_label_rf_y]
+                        
+                        st.divider()
+                        
+                        # 2. Configuration des variables explicatives (X)
+                        st.write("###### ⚙️ Choisir les variables prédictives (X)")
+                        filter_mode = st.radio(
+                            "Niveau de détail des facteurs :", 
+                            ["Automatique (Tout)", "Scores des Parties", "Questions détaillées (Items)"],
+                            horizontal=True,
+                            key="rf_filter_mode"
+                        )
+                        
+                        # Filtrage des candidats (colonnes numériques uniquement, excluant la cible et l'ID)
+                        all_candidates = [c for c in df_model.columns if df_model[c].dtype in ['float64', 'int64'] and c != rf_target and "ID" not in c]
+                        
+                        if "Scores" in filter_mode:
+                            default_feats = [c for c in all_candidates if any(x in c.lower() for x in ['score', 'total', 'moyenne', 'partie'])]
+                        elif "Questions" in filter_mode:
+                            default_feats = [c for c in all_candidates if any(x in c.lower() for x in ['q', 'item']) and "total" not in c.lower()]
+                        else:
+                            default_feats = all_candidates
+
+                        rf_features = st.multiselect("Confirmez les variables explicatives à tester :", all_candidates, default=default_feats[:15], key="rf_x_select")
+
+                        st.markdown("---")
+
+                        # --- B. CALCUL DU MODÈLE ---
+                        if st.button("🌲 Lancer l'IA (Random Forest)"):
+                            if not rf_features:
+                                st.error("⚠️ Veuillez sélectionner au moins une variable explicative.")
+                            else:
+                                try:
+                                    from sklearn.ensemble import RandomForestRegressor
+                                    
+                                    # Nettoyage des données
+                                    df_rf = df_model[[rf_target] + rf_features].dropna()
+                                    
+                                    if df_rf.empty:
+                                        st.error("Données insuffisantes après nettoyage.")
+                                    else:
                                         X = df_rf[rf_features]
                                         y = df_rf[rf_target]
                                         
-                                        # Modèle
-                                        rf = RandomForestRegressor(n_estimators=100, random_state=42)
-                                        rf.fit(X, y)
+                                        # Entraînement du modèle
+                                        model_rf = RandomForestRegressor(n_estimators=100, random_state=42)
+                                        model_rf.fit(X, y)
                                         
-                                        # Importance
+                                        # Calcul de la précision
+                                        r2_score = model_rf.score(X, y)
+                                        
+                                        # Extraction de l'importance
                                         importances = pd.DataFrame({
                                             'Variable': rf_features,
-                                            'Importance': rf.feature_importances_
-                                        }).sort_values('Importance', ascending=True).tail(15)
-                                        
-                                        st.success(f"Précision IA (R²) : {rf.score(X, y):.1%}")
+                                            'Importance': model_rf.feature_importances_
+                                        }).sort_values('Importance', ascending=True)
 
-                                        # --- AJOUT : FENÊTRE D'AIDE CLIQUABLE ---
-                                        with st.expander("📘 Aide à la lecture : Qu'est-ce que l'Importance ?", expanded=False):
-                                            st.markdown("""
-                                            L'IA (Forêt Aléatoire) a testé des milliers de combinaisons pour prédire la note cible.
-                                            
-                                            **Comment lire le graphique ci-dessous ?**
-                                            * **La longueur de la barre :** Elle indique le **poids** de la variable dans la décision finale.
-                                            * **Une grande barre :** Signifie que si cette variable change, la note cible change beaucoup. C'est un facteur déterminant.
-                                            * **Une petite barre :** Cette variable a peu d'impact sur le résultat.
-                                            
-                                            *Note : Contrairement à la régression classique, ce graphique ne dit pas si l'effet est positif ou négatif, il dit juste que c'est "Important".*
-                                            """)
-                                        # ----------------------------------------
+                                        st.success(f"**Analyse terminée !** Précision du modèle (R²) : {r2_score:.1%}")
                                         
-                                        fig_rf = px.bar(importances, x='Importance', y='Variable', orientation='h', title="Top 15 des Facteurs d'influence")
+                                        # --- C. VISUALISATION ---
+                                        st.subheader(f"📊 Hiérarchie des facteurs pour : {selected_label_rf_y}")
+                                        
+                                        fig_rf = px.bar(
+                                            importances.tail(20), # On affiche le top 20 pour la lisibilité
+                                            x='Importance', 
+                                            y='Variable', 
+                                            orientation='h',
+                                            title="Poids des variables dans la prédiction du score",
+                                            color='Importance',
+                                            color_continuous_scale='Viridis',
+                                            text_auto='.3f'
+                                        )
+                                        
+                                        fig_rf.update_layout(
+                                            xaxis_title="Degré d'importance (0 à 1)",
+                                            yaxis_title="",
+                                            coloraxis_showscale=False,
+                                            height=600
+                                        )
+                                        
                                         st.plotly_chart(fig_rf, use_container_width=True)
-                                        st.caption("Lecture : Plus la barre est longue, plus cette variable est cruciale pour la prédiction.")
-                                    
-                                    except Exception as e:
-                                        st.error(f"Erreur Random Forest : {e}")
-                                else:
-                                    st.warning("Veuillez sélectionner au moins une variable explicative.")
+                                        
+                                        with st.expander("📚 Comment interpréter ce graphique ?"):
+                                            st.markdown(f"""
+                                            * **La Variable '{importances.iloc[-1]['Variable']}'** est le prédicteur le plus puissant pour expliquer le résultat de **{selected_label_rf_y}**.
+                                            * Le score de précision (**{r2_score:.1%}**) indique dans quelle mesure ces facteurs suffisent à expliquer les différences entre les participants.
+                                            * Si une variable de 'Statut' ou de 'Zone' apparaît en haut, cela confirme son rôle crucial dans l'appropriation des concepts SciCoNum.
+                                            """)
 
+                                except Exception as e:
+                                    st.error(f"Erreur lors du calcul Random Forest : {e}")
+                    else:
+                        st.warning("Aucune colonne de score disponible pour l'analyse.")
                     # --- 4. CLUSTERING (K-MEANS) ---
                     with subtab_clus:
                         st.subheader("Clustering (K-Means)")
@@ -3273,11 +3972,8 @@ if df_raw is not None:
                         }
 
                         # --- CORRECTION FILTRES ---
-                        # 1. On ne prend QUE les colonnes qui sont des chiffres (float/int)
                         cols_numeriques = df.select_dtypes(include=['float64', 'int64']).columns
                         
-                        # 2. On garde celles qui contiennent "total" ET "partie"
-                        # 3. ET on exclut explicitement "Quelle", "appro" ou "3.6" pour nettoyer l'affichage
                         options_cluster = [
                             c for c in cols_numeriques 
                             if "total" in c.lower() 
@@ -3285,17 +3981,15 @@ if df_raw is not None:
                             and "quelle" not in c.lower()
                         ]
                         
-                        # Sécurité : Si la liste est vide, on prend toutes les numériques (sauf ID et Questions)
                         if not options_cluster:
                              options_cluster = [c for c in cols_numeriques if "ID" not in c and "quelle" not in c.lower()]
                         
-                        # AJOUT format_func pour afficher tes titres
                         vars_c = st.multiselect(
                             "Critères de regroupement :", 
                             options_cluster, 
                             default=options_cluster, 
                             key="clus_vars",
-                            format_func=lambda x: mapping_noms.get(x, x) # Affiche le titre si dispo, sinon le nom original
+                            format_func=lambda x: mapping_noms.get(x, x)
                         )
                         
                         if len(vars_c) > 1:
@@ -3303,7 +3997,6 @@ if df_raw is not None:
                             
                             if st.button("🔍 Identifier les profils"):
                                 try:
-                                    # On utilise df avec les colonnes sélectionnées (Noms originaux pour le calcul)
                                     data_clus = df[vars_c].dropna()
                                     
                                     # Standardisation
@@ -3313,49 +4006,69 @@ if df_raw is not None:
                                     km = KMeans(n_clusters=nk, random_state=42).fit(X_std)
                                     
                                     # Préparation Résultats
-                                    # ICI : On renomme les colonnes pour que le graphique affiche tes titres
                                     cols_display = [mapping_noms.get(c, c) for c in vars_c]
                                     df_res = pd.DataFrame(X_std, columns=cols_display)
                                     
-                                    df_res['Cluster'] = km.labels_.astype(str)
+                                    # Attribution des clusters
+                                    df_res['Cluster_ID'] = km.labels_
                                     
-                                    st.success(f"✅ {nk} groupes identifiés avec succès sur {len(data_clus)} participants.")
+                                    # --- CALCUL DES EFFECTIFS POUR LA LÉGENDE ---
+                                    counts = df_res['Cluster_ID'].value_counts().to_dict()
+                                    df_res['Cluster'] = df_res['Cluster_ID'].apply(lambda x: f"Groupe {x} (n={counts[x]})")
+                                    
+                                    st.success(f"✅ Analyse terminée : {nk} groupes identifiés sur {len(data_clus)} participants.")
 
-                                    # --- FENÊTRE D'AIDE CLIQUABLE ---
-                                    with st.expander("📘 Aide à la lecture : Comment comprendre ces Profils ?", expanded=False):
-                                        st.markdown("""
-                                        L'ordinateur a scanné les réponses pour créer des "familles" de participants qui se ressemblent.
-                                        
-                                        **1. La Carte d'Identité (Graphique Radar - En haut) :**
-                                        * C'est le "portrait robot" de chaque groupe.
-                                        * **Comment lire ?** Regardez les pointes colorées.
-                                        * Si la ligne d'un groupe tire vers **l'extérieur** sur une branche (ex: Total Partie 5), cela veut dire que ce groupe est **très fort** dans ce domaine.
-                                        * Si elle reste au **centre**, le groupe est faible.
-                                        
-                                        **2. La Carte des Individus (Nuage de points - En bas) :**
-                                        * Chaque point est une personne réelle (un enseignant).
-                                        * **Proximité :** Deux points côte à côte sont deux personnes qui ont répondu presque la même chose.
-                                        * **Couleurs :** Elles montrent comment l'algorithme a découpé la population. Si les couleurs sont bien séparées, les profils sont très distincts.
+                                    # --- FENÊTRE D'AIDE ET EXPLICATIONS ---
+                                    with st.expander("📘 Qu'est-ce que cette analyse ? (Aide au décryptage)", expanded=True):
+                                        st.markdown(f"""
+                                        ### Pourquoi faire un "Clustering" ?
+                                        Le but n'est pas de regarder chaque enseignant un par un, mais de voir s'il existe des **profils types**. 
+                                        L'intelligence artificielle a regroupé les {len(data_clus)} répondants en **{nk} familles** distinctes selon leurs réponses.
+
+                                        ### Comment lire les résultats ?
+                                        1. **Le Portrait-Robot (Graphique Radar) :** * Chaque couleur représente un groupe. Plus la ligne s'éloigne du centre, plus le groupe a des scores **élevés** (au-dessus de la moyenne) pour ce critère. 
+                                           * Si la ligne est proche du centre, le groupe est plus **réservé** ou en difficulté sur ce point.
+
+                                        2. **La Carte des Affinités (Nuage de points) :** * Imaginez une salle où chaque point est un enseignant.
+                                           * Si deux points sont collés, c'est que ces deux enseignants ont des pratiques ou des avis presque identiques.
+                                           * Les couleurs montrent les frontières décidées par l'algorithme.
                                         """)
-                                    # ----------------------------------------
                                     
                                     # 1. Graphique Radar (Profils)
-                                    means = df_res.groupby('Cluster').mean().reset_index().melt(id_vars='Cluster')
-                                    fig_radar = px.line_polar(means, r='value', theta='variable', color='Cluster', line_close=True, title="Carte d'Identité des Profils")
+                                    # On regroupe par le nom du cluster incluant l'effectif
+                                    means = df_res.drop(columns='Cluster_ID').groupby('Cluster').mean().reset_index().melt(id_vars='Cluster')
+                                    
+                                    fig_radar = px.line_polar(
+                                        means, 
+                                        r='value', 
+                                        theta='variable', 
+                                        color='Cluster', 
+                                        line_close=True, 
+                                        title="Portrait-Robot : Forces et Faiblesses par Groupe"
+                                    )
                                     fig_radar.update_traces(fill='toself')
                                     st.plotly_chart(fig_radar, use_container_width=True)
                                     
-                                    st.caption("Les axes sont des valeurs standardisées (0 = Moyenne globale). Si ça tend vers l'extérieur, le groupe est fort dans ce domaine.")
+                                    st.info("💡 **Note sur les scores :** Les valeurs sont centrées sur 0. Un score de 1 signifie que le groupe est nettement au-dessus de la moyenne des autres participants.")
                                     
                                     # 2. Graphique PCA (Nuage de points 2D)
                                     st.markdown("---")
-                                    st.subheader("Visualisation des individus (Projection 2D)")
+                                    st.subheader("Où se situent les participants les uns par rapport aux autres ?")
+                                    
                                     pca = PCA(n_components=2)
                                     coords = pca.fit_transform(X_std)
                                     df_res['x'] = coords[:, 0]
                                     df_res['y'] = coords[:, 1]
                                     
-                                    fig_pca = px.scatter(df_res, x='x', y='y', color='Cluster', title="Carte des individus", opacity=0.7)
+                                    fig_pca = px.scatter(
+                                        df_res, 
+                                        x='x', 
+                                        y='y', 
+                                        color='Cluster', 
+                                        title="Carte de proximité des individus",
+                                        labels={'x': 'Différenciation principale', 'y': 'Différenciation secondaire'},
+                                        opacity=0.7
+                                    )
                                     st.plotly_chart(fig_pca, use_container_width=True)
                                     
                                 except Exception as e:
@@ -3513,10 +4226,7 @@ if df_raw is not None:
                         st.warning("⚠️ Aucune colonne de texte long (Commentaires) détectée dans ce fichier.")
 
     # =========================================================================
-            # ONGLET 7 : MODÈLES MULTINIVEAUX (HLM / MIXED MODELS)
-            # =========================================================================
-# =========================================================================
-                # ONGLET 7 : MODÈLES MULTINIVEAUX (HLM / MIXED MODELS)
+           # ONGLET 7 : MODÈLES MULTINIVEAUX (HLM / MIXED MODELS)
                 # =========================================================================
                 with tabs[7]:
                     st.header("🏗️ Analyses Multiniveaux (Modèles Mixtes)")
@@ -3524,259 +4234,171 @@ if df_raw is not None:
                     # --- EXPLICATION PÉDAGOGIQUE ---
                     st.info("""
                     ### 🧐 Pourquoi utiliser un modèle multiniveau ?
-                    Vos données sont **hiérarchisées** (emboîtées) : Les enseignants exercent dans des **Académies** (ou des zones géographiques).
+                    Vos données sont **hiérarchisées** (emboîtées) : Les enseignants exercent dans des **Académies** ou appartiennent à des **Statuts** spécifiques.
                     
-                    * **L'effet de contexte (ICC) :** On cherche à savoir si le fait d'appartenir à l'Académie de Bordeaux ou de Créteil change les résultats, indépendamment du profil de l'enseignant.
-                    * **Modèle Mixte :** On sépare ce qui vient de l'individu (Effet Fixe) de ce qui vient du territoire (Effet Aléatoire).
+                    * **L'effet de contexte (ICC) :** On cherche à savoir si le groupe choisi (Niveau 2) explique une partie de la variance des résultats.
+                    * **Modèle Mixte :** On sépare ce qui vient de l'individu (Effet Fixe) de ce qui vient du groupe (Effet Aléatoire).
                     """)
 
                     st.divider()
 
-                    # --- SÉLECTION DES DONNÉES ---
-                    if total_cols and col_academie:
-                        # --- CONFIGURATION UNIQUE DES COLONNES ---
+                    # --- 1. PRÉPARATION DES CIBLES (Y) ---
+                    targets_map_hlm = {
+                        "🏆 Score Global (Total /100)": "Total_par_repondeur",
+                        "🧠 Partie 2 : Fonctionnement & Dév. (/32)": "total_partie_2",
+                        "🛠️ Partie 3 : Pratiques & Interventions (/28)": "total_partie_3",
+                        "💻 Partie 4 : Outils Numériques (/24)": "total_partie_4",
+                        "📝 Partie 5 : Évaluation (/16)": "total_partie_5" 
+                    }
+                    
+                    available_targets_hlm = {}
+                    for label, col_name in targets_map_hlm.items():
+                        found_col = next((c for c in df.columns if c.replace(" ", "") == col_name.replace(" ", "")), None)
+                        if found_col:
+                            available_targets_hlm[label] = found_col
+
+                    # --- SÉLECTION ET CALCUL ---
+                    if available_targets_hlm:
                         c_hlm_select1, c_hlm_select2, c_hlm_select3 = st.columns(3)
                         
-                        # 1. Variable dépendante (Score)
-                        y_target_hlm = c_hlm_select1.selectbox("1. Variable à expliquer (Y) :", total_cols, key="hlm_y_target_final")
+                        # 1. Variable dépendante (Y)
+                        y_target_hlm_label = c_hlm_select1.selectbox(
+                            "1. Variable à expliquer (Y) :", 
+                            options=list(available_targets_hlm.keys()), 
+                            key="hlm_y_target_final"
+                        )
+                        y_target_hlm = available_targets_hlm[y_target_hlm_label]
                         
                         # 2. Variable de regroupement (Niveau 2)
-                        keywords_group = ["zone", "statut", "niveau", "type", "établissement", "circonscription"]
-                        potential_groups = [col_academie]
-                        
-                        if 'col_statut' in locals() and col_statut not in potential_groups:
-                            potential_groups.append(col_statut)
-                        
-                        potential_groups += [
-                            c for c in df.columns 
-                            if any(k in c.lower() for k in keywords_group) 
-                            and "[" not in c 
-                            and c not in potential_groups
-                            and df[c].dtype == 'object'
-                            and df[c].nunique() < 100
-                            and "classes multi" not in c.lower()  
-                            and "conseiller" not in c.lower()     
-                        ]
-                        
-                        group_col = c_hlm_select2.selectbox("2. Variable de Regroupement (Niveau 2) :", potential_groups, key="hlm_group_final")
-                        
-                        # 3. Facteurs explicatifs (Niveau 1)
-                        x_candidates = [c for c in df.columns if c not in [y_target_hlm, group_col, "ID de la réponse"]] # On autorise tout pour le filtrage après
-                        x_fixed = c_hlm_select3.multiselect("3. Facteurs explicatifs (Fixes) :", [c for c in df.columns if "score" in c.lower() or "ancien" in c.lower()], key="hlm_x_fixed_final")
+                        with c_hlm_select2:
+                            col_formation = next((c for c in df.columns if "niveau de formation" in c.lower()), None)
+                            col_etab = next((c for c in df.columns if "type d'établissement" in c.lower()), None)
+
+                            group_options = {
+                                "Statuts (Tous les statuts détaillés)": col_statut,
+                                "Académies": col_academie
+                            }
+                            if col_formation: group_options["Niveaux de Formation"] = col_formation
+                            if col_etab: group_options["Types d'Établissement"] = col_etab
+                            
+                            cols_zones = [c for c in df.columns if "zone" in c.lower() and "[" not in c]
+                            for cz in cols_zones:
+                                group_options[f"Zone: {cz}"] = cz
+
+                            group_label = st.selectbox(
+                                "2. Regroupement (Niveau 2) :", 
+                                options=list(group_options.keys()), 
+                                key="hlm_group_manual"
+                            )
+                            group_col = group_options[group_label]
+
+                        # 3. Facteurs explicatifs (Fixes)
+                        with c_hlm_select3:
+                            fixed_requested = [
+                                "Ancienneté",
+                                "Plan Français",
+                                "Possédez-vous un Diplôme de Master MEEF mention 1er degré",
+                                "Avez-vous obtenu le CRPE",
+                                "quotité de travail",
+                                "classes multi-niveaux",
+                                "4.2. Utilisez-vous actuellement des logiciels",
+                                "4.1. Pour enseigner la production écrite à vos élèves, avez-vous déjà eu recours à des outils numériques comme :   Cochez tout ce qui s’applique : plusieurs réponses possibles le cas échéant.  [Aucun outil numérique]"
+                            ]
+                            
+                            final_x_candidates = []
+                            for req in fixed_requested:
+                                found = next((c for c in df.columns if req.lower() in c.lower()), None)
+                                if found and found != group_col and found != y_target_hlm:
+                                    final_x_candidates.append(found)
+
+                            x_fixed = st.multiselect(
+                                "3. Facteurs explicatifs (Fixes) :", 
+                                options=final_x_candidates, 
+                                default=final_x_candidates, 
+                                key="hlm_x_fixed_final"
+                            )
 
                         st.markdown("---")
 
                         if st.button("🚀 Calculer le Modèle Mixte (MixedLM)", key="btn_launch_mixedlm_final"):
-                            with st.spinner("Extraction des chiffres et analyse..."):
+                            with st.spinner("Analyse statistique en cours..."):
                                 try:
                                     import statsmodels.formula.api as smf
                                     
-                                    # =========================================================
-                                    # 1. PRÉPARATION INTELLIGENTE & EXTRACTION FORCE BRUTE
-                                    # =========================================================
-                                    
-                                    # On fait une copie de travail
                                     df_hlm = df.copy()
-                                    
-                                    # A. Conversion du Groupe en texte (catégorie)
                                     df_hlm[group_col] = df_hlm[group_col].astype(str)
-                                    
-                                    # B. Vérification et Nettoyage des Facteurs Explicatifs (X)
-                                    valid_x_fixed = []
-                                    rejected_cols = []
-                                    
-                                    for col in x_fixed:
-                                        # 1. Tentative standard
-                                        converted = pd.to_numeric(df_hlm[col], errors='coerce')
-                                        
-                                        # 2. Si échec (trop de vides), on tente l'extraction Regex (Force brute)
-                                        # Ex: "2 points" -> 2
-                                        if converted.isna().mean() > 0.3:
-                                            # On prend le premier groupe de chiffres trouvé
-                                            extracted = df_hlm[col].astype(str).str.extract(r'(\d+[.,]?\d*)', expand=False)
-                                            # On remplace virgule par point
-                                            extracted = extracted.str.replace(',', '.', regex=False)
-                                            converted = pd.to_numeric(extracted, errors='coerce')
-                                        
-                                        # 3. Verdict final : Si toujours trop de vides (>50%), on rejette
-                                        if converted.isna().mean() > 0.5:
-                                            rejected_cols.append(col)
-                                        else:
-                                            # C'est bon, on garde la version numérique
-                                            df_hlm[col] = converted
-                                            valid_x_fixed.append(col)
-                                    
-                                    # Conversion de la cible (Y) aussi
                                     df_hlm[y_target_hlm] = pd.to_numeric(df_hlm[y_target_hlm], errors='coerce')
                                     
-                                    # C. Feedback à l'utilisateur (SANS BLOQUER)
-                                    if rejected_cols:
-                                        st.warning(f"""
-                                        ⚠️ **Correction automatique :** Impossible d'extraire des chiffres fiables pour ces colonnes (trop de texte) :
-                                        * {', '.join(rejected_cols)}
-                                        *Le calcul continue avec les {len(valid_x_fixed)} autres variables.*
-                                        """)
+                                    cols_model = [y_target_hlm, group_col] + x_fixed
+                                    df_hlm = df_hlm[cols_model].dropna()
                                     
-                                    # D. Sélection finale des colonnes utiles
-                                    cols_final = [y_target_hlm, group_col] + valid_x_fixed
-                                    df_hlm = df_hlm[cols_final].dropna()
-                                    
-                                    # E. Filtrage des petits groupes
                                     counts = df_hlm[group_col].value_counts()
-                                    valid_groups = counts[counts > 2].index
-                                    df_hlm = df_hlm[df_hlm[group_col].isin(valid_groups)]
-                                    
-                                    # F. Reset Index
-                                    df_hlm = df_hlm.reset_index(drop=True)
-                                    
-                                    # G. Vérification finale
+                                    df_hlm = df_hlm[df_hlm[group_col].isin(counts[counts > 1].index)].reset_index(drop=True)
+
                                     if df_hlm.empty:
-                                        st.error("⚠️ Erreur : Plus aucune donnée disponible après nettoyage. Vérifiez que la variable Cible (Y) est bien numérique.")
-                                        st.stop()
-
-                                    # =========================================================
-                                    # 2. MODÉLISATION
-                                    # =========================================================
-                                    
-                                    # Renommage pour éviter les bugs (espaces, points...)
-                                    rename_map = {y_target_hlm: "TARGET", group_col: "GROUP"}
-                                    for i, col in enumerate(valid_x_fixed):
-                                        rename_map[col] = f"VAR_{i}"
-                                    
-                                    df_model_ready = df_hlm.rename(columns=rename_map)
-
-                                    # Formule dynamique avec les variables valides uniquement
-                                    if valid_x_fixed:
-                                        predictors = [f"VAR_{i}" for i in range(len(valid_x_fixed))]
-                                        formula = "TARGET ~ " + " + ".join(predictors)
+                                        st.error("⚠️ Pas assez de données pour ces critères.")
                                     else:
-                                        formula = "TARGET ~ 1" # Modèle vide si aucun X valide
+                                        rename_map = {y_target_hlm: "TARGET", group_col: "GROUP"}
+                                        for i, col in enumerate(x_fixed): rename_map[col] = f"VAR_{i}"
+                                        df_model_ready = df_hlm.rename(columns=rename_map)
 
-                                    # Fit
-                                    model_hlm = smf.mixedlm(formula, df_model_ready, groups=df_model_ready["GROUP"])
-                                    result_hlm = model_hlm.fit()
+                                        formula_parts = []
+                                        for i, col in enumerate(x_fixed):
+                                            if df_hlm[col].dtype == 'object': formula_parts.append(f"C(VAR_{i})")
+                                            else: formula_parts.append(f"VAR_{i}")
+                                        
+                                        formula = "TARGET ~ " + (" + ".join(formula_parts) if formula_parts else "1")
 
-                                    # Calculs résultats
-                                    try:
+                                        model_hlm = smf.mixedlm(formula, df_model_ready, groups=df_model_ready["GROUP"])
+                                        result_hlm = model_hlm.fit()
+
                                         var_re = float(result_hlm.cov_re.iloc[0, 0])
                                         var_resid = result_hlm.scale
-                                        icc = var_re / (var_re + var_resid)
-                                    except:
-                                        icc = 0
-                                        var_re = 0
-                                    
-                                    # =========================================================
-                                    # 3. AFFICHAGE RÉSULTATS
-                                    # =========================================================
-                                    c_res1, c_res2 = st.columns([1, 2])
-                                    # --- AJOUT DE L'EXPLICATION GRAND PUBLIC ---
-                                    with st.expander("❓ Aide : Comment interpréter le pourcentage et le diagnostic ?", expanded=False):
-                                        st.markdown("""
-                                        ### 🎯 Quel est le but ?
-                                        Cette analyse cherche à savoir si les scores sont influencés par le **contexte local** (votre Académie) ou s'ils dépendent uniquement du profil de chaque participant.
+                                        icc = var_re / (var_re + var_resid) if (var_re + var_resid) > 0 else 0
 
-                                        ### ⚖️ Le chiffre vs La preuve
-                                        * **Le Pourcentage (ICC) :** C'est un **indice**. Il montre la part d'influence potentielle du territoire. À 11%, on sent qu'il se passe quelque chose localement.
-                                        * **Le Diagnostic (Négligeable/Pertinent) :** C'est la **fiabilité**. Si un groupe est très grand et les autres très petits, l'ordinateur juge que le signal est trop fragile pour être une preuve scientifique.
-                                        
-                                        **Conclusion :** Un résultat peut être marqué "négligeable" même avec un pourcentage correct si les données sont trop déséquilibrées pour garantir une certitude mathématique.
-                                        """)
-                                    with c_res1:
-                                        st.metric("ICC (Effet Contextuel)", f"{icc:.2%}")
-                                    
-                                    with c_res2:
-                                        nb_groupes = len(result_hlm.random_effects)
-                                        st.success(f"Modèle convergé sur **{result_hlm.nobs:.0f} observations**.")
+                                        # AFFICHAGE DES RÉSULTATS PRINCIPAUX
+                                        c_res1, c_res2 = st.columns([1, 2])
+                                        with c_res1:
+                                            st.metric(f"ICC ({group_label})", f"{icc:.2%}")
+                                        with c_res2:
+                                            st.success(f"Analyse réussie sur {result_hlm.nobs:.0f} participants répartis en {df_hlm[group_col].nunique()} groupes.")
 
-                                    # --- DIAGNOSTIC INTELLIGENT ---
-                                    st.markdown("---")
-                                    st.subheader("💡 Diagnostic de l'Expert")
-
-                                    # LOGIQUE : Si variance nulle ou non-convergence
-                                    if var_re < 0.01 or result_hlm.converged is False:
-                                        st.warning(f"""
-                                        **📉 Résultat : L'effet de contexte est négligeable (Group Var = {var_re:.4f}).**
+                                        # =========================================================
+                                        # NOUVELLE SECTION : EXPLICATIONS GRAND PUBLIC
+                                        # =========================================================
+                                        st.markdown("---")
+                                        st.subheader("💡 Comprendre votre résultat")
                                         
-                                        Puisque la variance inter-groupe est quasi nulle et/ou que le modèle peine à converger, **vous n'avez pas besoin d'un modèle multiniveau complexe**.
-                                        L'effet "Académie/Groupe" est un bruit de fond inutile ici.
+                                        col_expl1, col_expl2 = st.columns(2)
                                         
-                                        👉 **Conseil :** Vous obtiendrez des résultats plus propres et tout aussi justes en utilisant simplement la **Régression Linéaire classique (OLS)** (disponible dans l'onglet 5 "Modélisation").
-                                        """)
-                                        with st.expander("📝 Résumé pour rapport (Négatif)"):
-                                            st.code(f"""
-    L'analyse multiniveau ne révèle aucun effet contextuel significatif lié à l'académie (Variance inter-groupe = {var_re:.3f} ≈ 0). 
-    Les disparités de performance s'expliquent donc entièrement par les caractéristiques individuelles des enseignants (telles que {', '.join(valid_x_fixed) if valid_x_fixed else 'les variables testées'}) et non par leur territoire d'exercice.
-                                            """, language="markdown")
-                                    else:
-                                        st.success(f"""
-                                        **🚀 Résultat : Il existe un véritable effet de contexte (Group Var = {var_re:.4f}) !**
-                                        Le modèle multiniveau est pertinent et a détecté des différences géographiques significatives.
-                                        """)
-                                        with st.expander("📝 Résumé pour rapport (Positif)"):
-                                            st.code(f"""
-    L'analyse multiniveau révèle un effet contextuel marqué : une part significative de la variance des scores est imputable au niveau de regroupement (Variance inter-groupe = {var_re:.3f}).
-    L'utilisation d'un modèle hiérarchique est donc validée.
-                                            """, language="markdown")
-
-                                    # --- GRAPHIQUES ---
-                                    st.markdown("---")
-                                    
-                                    # 1. CATERPILLAR PLOT (SÉCURISÉ)
-                                    try:
-                                        random_effects = result_hlm.random_effects
-                                        df_re = pd.DataFrame.from_dict(random_effects, orient='index', columns=['Effet'])
-                                        
-                                        # Si vide ou tout à zéro
-                                        if df_re.empty or (df_re['Effet'].abs().sum() < 0.001):
-                                            st.info("ℹ️ Pas d'écarts significatifs entre les académies à afficher (Graphique vide).")
-                                        else:
-                                            st.subheader("🐛 'Caterpillar Plot' (Ecarts par Académie)")
-                                            df_re = df_re.sort_values('Effet')
-                                            df_re['Color'] = df_re['Effet'].apply(lambda x: 'Supérieur' if x > 0 else 'Inférieur')
-                                            fig_cat = px.scatter(df_re, x="Effet", y=df_re.index, color="Color", 
-                                                                title="Écarts à la moyenne", color_discrete_map={'Supérieur': '#2ecc71', 'Inférieur': '#e74c3c'})
-                                            fig_cat.add_vline(x=0, line_color="black")
-                                            st.plotly_chart(fig_cat, use_container_width=True)
-                                    except Exception as e_graph:
-                                        st.info("Graphique non disponible.")
-
-                                    # 2. EFFETS FIXES (GRAPHIQUE)
-                                    if valid_x_fixed:
-                                        st.subheader("📊 Impact des variables (Effets Fixes)")
-                                        params = result_hlm.params.drop(["Intercept", "Group Var"], errors='ignore')
-                                        conf = result_hlm.conf_int().drop(["Intercept", "Group Var"], errors='ignore')
-                                        
-                                        if not params.empty:
-                                            reverse_map = {v: k for k, v in rename_map.items() if k in valid_x_fixed}
-                                            summary_data = []
-                                            for var_code in params.index:
-                                                summary_data.append({
-                                                    "Variable": reverse_map.get(var_code, var_code),
-                                                    "Coefficient": params[var_code],
-                                                    "Min": conf.loc[var_code, 0],
-                                                    "Max": conf.loc[var_code, 1]
-                                                })
+                                        with col_expl1:
+                                            st.markdown(f"#### Que signifie ce {icc:.2%} ?")
+                                            st.write(f"""
+                                            L'**ICC** (Coefficient de Corrélation Intraclasse) mesure la part de responsabilité du groupe (**{group_label}**) dans les variations de notes.
                                             
-                                            if summary_data:
-                                                fig_fixed = px.bar(pd.DataFrame(summary_data), x="Coefficient", y="Variable", 
-                                                                error_x="Max", error_x_minus="Min", orientation='h')
-                                                fig_fixed.add_vline(x=0, line_color="black")
-                                                st.plotly_chart(fig_fixed, use_container_width=True)
+                                            * **Interprétation :** Ici, environ **{icc*100:.1f}%** des différences de scores entre les répondants s'expliquent par leur appartenance à leur **{group_label}**.
+                                            * **Le reste ({(1-icc)*100:.1f}%) :** La grande majorité de la performance dépend de facteurs individuels (votre expérience, votre formation personnelle) et non de votre environnement géographique ou administratif.
+                                            """)
+                                        
+                                        with col_expl2:
+                                            st.markdown("#### Est-ce un impact important ?")
+                                            if icc < 0.05:
+                                                st.warning("⚖️ **Impact Faible :** Le contexte a très peu d'influence. Les profils sont homogènes d'un groupe à l'autre.")
+                                            elif icc < 0.15:
+                                                st.info("📊 **Impact Modéré :** Le contexte joue un rôle réel mais secondaire. Il existe des disparités locales qu'il est intéressant d'étudier.")
+                                            else:
+                                                st.success("🚀 **Impact Fort :** Le groupe est un facteur déterminant de la réussite. Le lieu d'exercice ou le statut crée de fortes inégalités de scores.")
 
-                                    # =========================================================
-                                    # 4. TABLEAU STATISTIQUE COMPLET (DANS UN MENU DÉROULANT)
-                                    # =========================================================
-                                    st.markdown("---")
-                                    
-                                    with st.expander("📋 Détails statistiques (Cliquez pour afficher les résultats bruts)", expanded=False):
-                                        st.write("Voici le résumé mathématique complet généré par le modèle :")
-                                        st.text(result_hlm.summary().as_text())
+                                        st.divider()
+
+                                        # RAPPORT TECHNIQUE DÉTAILLÉ (CONSERVÉ)
+                                        with st.expander("📋 Rapport technique détaillé", expanded=False):
+                                            st.text(result_hlm.summary().as_text())
 
                                 except Exception as e:
-                                    st.error(f"❌ Erreur technique détaillée : {e}")
+                                    st.error(f"Erreur technique : {e}. Essayez de retirer certains facteurs fixes.")
                     else:
-                        st.warning("Données manquantes (Score ou Académie) pour l'analyse multiniveau.")
-
+                        st.warning("⚠️ Données insuffisantes (Scores ou Statuts manquants).")
                 # >>> PAGE 7 : ASSISTANT COGNITIF (MODE DIAGNOSTIC + LECTURE CODE)
             elif page == "🧠 Assistant Cognitif":
                 

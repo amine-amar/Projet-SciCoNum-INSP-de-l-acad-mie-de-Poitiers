@@ -385,23 +385,30 @@ if df_raw is not None:
     """, unsafe_allow_html=True)
 
     # --- DÉBUT MODIFICATION LOGO ---
-    # On place le logo tout en haut de la barre latérale
-    logo_local = "logo_inspe.png"  # Assurez-vous que votre fichier s'appelle bien comme ça
-    logo_web = "https://github.com/amine-amar/Photo_inspe/blob/main/UP%20+%20INSPE%20HD.png?raw=true"
+    # ==========================================
+    # GESTION DU LOGO (Version Haute Stabilité)
+    # ==========================================
+    # 1. On définit le nom exact du fichier présent sur votre GitHub
+    nom_fichier_logo = "logo_inspe.png" 
+    
+    # 2. On construit le chemin pour que Python le trouve sur le serveur
+    chemin_logo = os.path.join(os.path.dirname(__file__), nom_fichier_logo)
 
-    if os.path.exists(logo_local):
-        # Priorité 1 : Fichier local (Plus rapide et stable)
-        st.sidebar.image(logo_local, use_container_width=True)
-    else:
-        # Priorité 2 : Lien Web (si le fichier local est absent)
-        try:
-            st.sidebar.image(logo_web, use_container_width=True)
-        except:
-            # Priorité 3 : Juste du texte (pour éviter l'icône brisée)
-            st.sidebar.header("🏫 INSPÉ Poitiers")
-
-    st.sidebar.markdown("---")
-    st.sidebar.title("📌 Menu Principal")
+    with st.sidebar:
+        if os.path.exists(chemin_logo):
+            # Si le fichier est présent dans votre GitHub, on l'affiche directement
+            st.image(chemin_logo, use_container_width=True)
+        else:
+            # Si le fichier est manquant, on tente le lien web direct (raw)
+            logo_url_fallback = "https://raw.githubusercontent.com/amine-amar/Photo_inspe/main/UP%20+%20INSPE%20HD.png"
+            try:
+                st.image(logo_url_fallback, use_container_width=True)
+            except:
+                # Si rien ne marche, on affiche le texte de secours
+                st.header("🏫 INSPÉ Poitiers")
+        
+        st.markdown("---")
+        st.sidebar.title("📌 Menu Principal")
     # --- FIN MODIFICATION LOGO ---
     
     # 2. Initialisation de la mémoire
@@ -2574,8 +2581,6 @@ if df_raw is not None:
                         **💡 Guide : Comment comparer 2 groupes ?**
                         Ici, on oppose deux équipes pour voir qui a la meilleure performance.
                         
-                        * ✅ **Exemples valides :** Sexe (H/F), Statut (Titulaire/Stagiaire), Formation (Initiale/Continue).
-                        * ❌ **Attention :** Ne comparez pas un groupe avec lui-même (ex: Hommes vs Hommes).
                         """)
 
                         # --- NOUVEAU SÉLECTEUR (Affichage Professionnel) ---
@@ -2901,11 +2906,10 @@ if df_raw is not None:
                     Nous explorons ici les liens statistiques pour voir si les réponses diffèrent selon les groupes.
                     
                     * **Corrélations (Variables Numériques) :**
-                        * **Pearson :** Lien linéaire (ex: Plus l'année d'étude est élevée, plus le score de connaissances augmente).
-                        * **Spearman :** Lien de rang (ex: Est-ce que le niveau de stress évolue dans le même sens que la fréquence d'utilisation ?).
+                        * **Pearson :** Lien linéaire
+                        * **Spearman :** Lien de rang 
                     * **Chi-2 (Variables Catégorielles - Comparaison de groupes) :**
                         * Permet de voir si **le Statut (Étudiant vs Enseignant)** influence significativement une réponse donnée.
-                        * *Exemple : La répartition des réponses "Oui/Non" à une question sur l'éthique est-elle différente chez les profs et les élèves ?*
                     """)
 
                     # --- LA QUESTION (ENCADRÉ VERT) ---
